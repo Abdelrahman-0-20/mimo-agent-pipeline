@@ -145,7 +145,7 @@ pipeline · fresh-machine reproducibility  PASS   DSH + 4 plugins + MCP config �
 plugin · escalator unit tests ........... PASS   node --test (zero-dependency bundle)
 ```
 
-## Multi-agent relay (v0.5, planned)
+## Multi-agent relay (v0.5, in progress)
 
 - **Role-scoped connector packs** — planner (github + memory + context7, pinned Pro) · scouts (repo/DB/docs read-only, parallel Flash) · builder (write + shell, single-writer lock, 2-strike escalation) · verifier (playwright + E2E, single-browser lock). DSH isolates MCP tools per agent scope, so scoping also cuts per-request tool-schema tokens and KV-cache churn.
 - **Verified connector packages (2026-11-17):** `@upstash/context7-mcp` ✅ `4.7.3` · `@modelcontextprotocol/server-postgres` ✅ `0.6.2` · `@modelcontextprotocol/server-sqlite` ❌ **does not exist — do not use**
@@ -161,8 +161,20 @@ plugin · escalator unit tests ........... PASS   node --test (zero-dependency b
 | **v0.2** | CI: fresh-machine reproducibility gate + secret scan + badge | ✅ |
 | **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed rounds (original code) | ✅ |
 | **v0.4** | Metrics + persistence/TTL + CI-status detection + real-usage benchmark | ✅ |
-| **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role keys, connector locks | ⬜ |
-| **v1.0** | Case study: pipeline builds a full MLOps project end-to-end | ⬜ |
+| **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role keys, connector locks | 🚧 in progress |
+| **v0.6** | **Cost & reach** — thinking-off-on-discovery · role-scoped connector packs · `context7` live-docs connector (check #10) · standalone stdio MCP server for other editors | ⬜ |
+| **v0.7** | **Public launch** — final secret scan → repo goes public · demo GIF (memory recall + one relay run) · GitHub profile README + repo descriptions | ⬜ |
+| **v1.0** | Case study: the pipeline builds a full MLOps project end-to-end via the relay · harder benchmark tasks | ⬜ |
+
+### The plan after v0.5
+
+1. **v0.6 — Cost & reach.** Three cost levers + one reach lever:
+   - *Thinking-off-on-discovery* — reasoning off during clean `grep`/`read` steps, back on for edits/tests/debugging; rides the escalator's already-proven `agent.model.select(…, reasoningEffort)` mechanism (debounced, and measured against cache-hit rate before trusting the savings).
+   - *Role-scoped connector packs* — subagents carry only their tools, cutting per-request tool-schema tokens (DSH isolates MCP tools per agent scope).
+   - *`context7` live-docs connector* (verified `4.7.3`, keyless) — the agent reads **today's** APIs instead of recalling stale ones → fewer wrong-code failures → fewer escalations → cheaper runs. Adds `verify.sh` check #10.
+   - *Standalone stdio MCP server* — the same engine drives Cursor / Claude Code / VS Code (reach, not cost).
+2. **v0.7 — Collect the reward.** Final secret scan → flip the repo **public**, add a demo GIF (cross-session memory recall + one relay run), and write the GitHub profile README + repo descriptions — profile polish *before* the case study, not after.
+3. **v1.0 — The proof.** One real project (the `insurance-claim-mlops` rebuild: tests, CI, FastAPI, Docker) built end-to-end through the relay, plus harder benchmark tasks where Flash-vs-Pro quality finally discriminates.
 
 ## Security
 
