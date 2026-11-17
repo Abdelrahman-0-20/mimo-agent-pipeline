@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-mimo-escalator",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Auto-escalates a DeepSeek Harness session from mimo-v2.6-flash to mimo-v2.6-pro after two consecutive failed verification rounds, then returns to Flash after sustained passes.",
   "type": "module",
   "private": true,

@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "label": "real usage — dsh headless --json over benchmark/model-overlay.yml; identical tasks per model; harness-default sampling",
+    "date": "2026-11-17T18:32:18.920Z",
+    "commit": "0e59f04",
+    "models": [
+      "mimo-v2.6-flash",
+      "mimo-v2.6-pro"
+    ],
+    "tasks": [
+      "code-palindrome"
+    ]
+  },
+  "results": [
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "code-palindrome",
+      "correct": false,
+      "wallMs": 6622,
+      "usage": {
+        "inputTokens": 6106,
+        "outputTokens": 85,
+        "totalTokens": 7215,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function isPalindrome(s) {\n  const t = s.toLowerCase();\n  let i = 0;\n  let j = t.length - 1;\n  while (i < j) {\n    if (t[i] !== t[j]) return false;\n    i++;\n    j--;\n  }\n  return true;\n}"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "code-palindrome",
+      "correct": false,
+      "wallMs": 5785,
+      "usage": {
+        "inputTokens": 1504,
+        "outputTokens": 206,
+        "totalTokens": 7342,
+        "cacheReadTokens": 5632
+      },
+      "answer": "function isPalindrome(s) {\n  const str = s.toLowerCase();\n  let left = 0;\n  let right = str.length - 1;\n  while (left < right) {\n    if (str[left] !== str[right]) return false;\n    left++;\n    right--;\n  }\n  return true;\n}"
+    }
+  ],
+  "aggregate": {
+    "mimo-v2.6-flash": {
+      "quality": "0/1",
+      "inputTokens": 6106,
+      "outputTokens": 85,
+      "totalTokens": 7215,
+      "cacheReadTokens": 1024,
+      "avgWallMs": 6622,
+      "errors": 0
+    },
+    "mimo-v2.6-pro": {
+      "quality": "0/1",
+      "inputTokens": 1504,
+      "outputTokens": 206,
+      "totalTokens": 7342,
+      "cacheReadTokens": 5632,
+      "avgWallMs": 5785,
+      "errors": 0
+    }
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "meta": {
+    "label": "real usage — dsh headless --json over benchmark/model-overlay.yml; identical tasks per model; harness-default sampling",
+    "date": "2026-11-17T18:39:31.714Z",
+    "commit": "0e59f04",
+    "models": [
+      "mimo-v2.6-flash",
+      "mimo-v2.6-pro"
+    ],
+    "tasks": [
+      "crt-ball-bat",
+      "crt-widgets",
+      "crt-lily-pad",
+      "exact-string",
+      "arith-17x23",
+      "code-palindrome"
+    ]
+  },
+  "results": [
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "crt-ball-bat",
+      "correct": true,
+      "wallMs": 5645,
+      "usage": {
+        "inputTokens": 6114,
+        "outputTokens": 29,
+        "totalTokens": 7167,
+        "cacheReadTokens": 1024
+      },
+      "answer": "0.05"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "crt-widgets",
+      "correct": true,
+      "wallMs": 5223,
+      "usage": {
+        "inputTokens": 6114,
+        "outputTokens": 55,
+        "totalTokens": 7193,
+        "cacheReadTokens": 1024
+      },
+      "answer": "5"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "crt-lily-pad",
+      "correct": true,
+      "wallMs": 3715,
+      "usage": {
+        "inputTokens": 6112,
+        "outputTokens": 7,
+        "totalTokens": 7143,
+        "cacheReadTokens": 1024
+      },
+      "answer": "47"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "exact-string",
+      "correct": true,
+      "wallMs": 4522,
+      "usage": {
+        "inputTokens": 6079,
+        "outputTokens": 24,
+        "totalTokens": 7127,
+        "cacheReadTokens": 1024
+      },
+      "answer": "BANANA-42"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "arith-17x23",
+      "correct": true,
+      "wallMs": 4807,
+      "usage": {
+        "inputTokens": 6087,
+        "outputTokens": 17,
+        "totalTokens": 7128,
+        "cacheReadTokens": 1024
+      },
+      "answer": "391"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "code-palindrome",
+      "correct": true,
+      "wallMs": 6720,
+      "usage": {
+        "inputTokens": 6109,
+        "outputTokens": 105,
+        "totalTokens": 7238,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function isPalindrome(s) {\n  const t = s.toLowerCase();\n  for (let i = 0, j = t.length - 1; i < j; i++, j--) {\n    if (t[i] !== t[j]) return false;\n  }\n  return true;\n}"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "crt-ball-bat",
+      "correct": true,
+      "wallMs": 4110,
+      "usage": {
+        "inputTokens": 1502,
+        "outputTokens": 83,
+        "totalTokens": 7217,
+        "cacheReadTokens": 5632
+      },
+      "answer": "0.05"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "crt-widgets",
+      "correct": true,
+      "wallMs": 5037,
+      "usage": {
+        "inputTokens": 1504,
+        "outputTokens": 80,
+        "totalTokens": 7216,
+        "cacheReadTokens": 5632
+      },
+      "answer": "5"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "crt-lily-pad",
+      "correct": true,
+      "wallMs": 3993,
+      "usage": {
+        "inputTokens": 1502,
+        "outputTokens": 49,
+        "totalTokens": 7183,
+        "cacheReadTokens": 5632
+      },
+      "answer": "47"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "exact-string",
+      "correct": true,
+      "wallMs": 4362,
+      "usage": {
+        "inputTokens": 1473,
+        "outputTokens": 24,
+        "totalTokens": 7129,
+        "cacheReadTokens": 5632
+      },
+      "answer": "BANANA-42"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "arith-17x23",
+      "correct": true,
+      "wallMs": 3683,
+      "usage": {
+        "inputTokens": 1479,
+        "outputTokens": 21,
+        "totalTokens": 7132,
+        "cacheReadTokens": 5632
+      },
+      "answer": "391"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "code-palindrome",
+      "correct": true,
+      "wallMs": 12903,
+      "usage": {
+        "inputTokens": 2109,
+        "outputTokens": 538,
+        "totalTokens": 15319,
+        "cacheReadTokens": 12672
+      },
+      "answer": "function isPalindrome(s) {\n  const t = s.toLowerCase();\n  let i = 0, j = t.length - 1;\n  while (i < j) {\n    if (t[i] !== t[j]) return false;\n    i++;\n    j--;\n  }\n  return true;\n}"
+    }
+  ],
+  "aggregate": {
+    "mimo-v2.6-flash": {
+      "quality": "6/6",
+      "inputTokens": 36615,
+      "outputTokens": 237,
+      "totalTokens": 42996,
+      "cacheReadTokens": 6144,
+      "avgWallMs": 5105,
+      "errors": 0
+    },
+    "mimo-v2.6-pro": {
+      "quality": "6/6",
+      "inputTokens": 9569,
+      "outputTokens": 795,
+      "totalTokens": 51196,
+      "cacheReadTokens": 40832,
+      "avgWallMs": 5681,
+      "errors": 0
+    }
+  }
+}

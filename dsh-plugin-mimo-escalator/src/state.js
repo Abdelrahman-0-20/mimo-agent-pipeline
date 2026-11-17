@@ -19,11 +19,12 @@ export class EscalationState {
   #escalated = false
 
   /**
-   * @param {{ threshold?: number, demoteThreshold?: number }} [options]
+   * @param {{ threshold?: number, demoteThreshold?: number, initial?: { strikes?: number, passes?: number, escalated?: boolean } }} [options]
    *   threshold — consecutive failed rounds that trigger escalation.
    *   demoteThreshold — consecutive passing rounds required to return.
+   *   initial — persisted snapshot to hydrate from (v0.4 durability).
    */
-  constructor({ threshold = 2, demoteThreshold = 2 } = {}) {
+  constructor({ threshold = 2, demoteThreshold = 2, initial } = {}) {
     if (!Number.isInteger(threshold) || threshold < 1) {
       throw new RangeError('threshold must be an integer >= 1')
     }
@@ -32,6 +33,9 @@ export class EscalationState {
     }
     this.#threshold = threshold
     this.#demoteThreshold = demoteThreshold
+    if (initial !== undefined && initial !== null) {
+      this.restore(initial)
+    }
   }
 
   /** Consecutive failed rounds since the last pass. */
@@ -42,6 +46,26 @@ export class EscalationState {
 
   /** Whether the session is currently escalated. */
   get escalated() { return this.#escalated }
+
+  /**
+   * A plain, JSON-safe snapshot of the hysteresis state.
+   * @returns {{ strikes: number, passes: number, escalated: boolean }}
+   */
+  snapshot() {
+    return { strikes: this.#strikes, passes: this.#passes, escalated: this.#escalated }
+  }
+
+  /**
+   * Hydrate from a persisted snapshot; unusable values are ignored (the
+   * state stays as constructed) so a tampered store can never crash a round.
+   * @param {{ strikes?: unknown, passes?: unknown, escalated?: unknown }} snapshot - stored state.
+   */
+  restore(snapshot) {
+    if (snapshot === null || typeof snapshot !== 'object') return
+    if (Number.isInteger(snapshot.strikes) && snapshot.strikes >= 0) this.#strikes = snapshot.strikes
+    if (Number.isInteger(snapshot.passes) && snapshot.passes >= 0) this.#passes = snapshot.passes
+    if (typeof snapshot.escalated === 'boolean') this.#escalated = snapshot.escalated
+  }
 
   /**
    * Record one verification round and return the transition it caused.

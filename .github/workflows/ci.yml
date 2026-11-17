@@ -16,6 +16,9 @@ jobs:
       - name: Shell script syntax
         run: bash -n install.sh && bash -n verify.sh && echo "shell OK"
 
+      - name: Benchmark script syntax
+        run: node --check benchmark/run.mjs && echo "benchmark OK"
+
       - name: YAML structure (config templates)
         run: |
           npx -y js-yaml@5.5.0 <(sed 's/!!js //g' config/cordis.patch.yml.example) > /dev/null && echo "cordis template OK"

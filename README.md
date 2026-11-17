@@ -2,7 +2,7 @@
 
 > An end-to-end **autonomous engineering pipeline** for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — dual-model **Xiaomi MiMo** routing, persistent MCP memory, independent code review, and deterministic verification gates.
 
-![version](https://img.shields.io/badge/version-v0.3.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![CI](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/actions/workflows/ci.yml/badge.svg)
+![version](https://img.shields.io/badge/version-v0.4.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![CI](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/actions/workflows/ci.yml/badge.svg)
 
 ## What this is
 
@@ -36,7 +36,8 @@ flowchart TD
 | `config/settings.yaml.example` | Same routing expressed in DSH's `settings.yaml` style |
 | `install.sh` | Installs the 3 MichengAI plugins + the local escalator bundle + pinned memory server into your DSH profile |
 | `verify.sh` | Exit-code-0 gate: proves all 8 components mounted via `dsh --dump-config` |
-| `dsh-plugin-mimo-escalator/` | **v0.3 plugin (original code)** — auto Flash→Pro after 2 failed verification rounds, hysteresis back to Flash · `npm test` |
+| `dsh-plugin-mimo-escalator/` | **v0.3/v0.4 plugin (original code)** — auto Flash→Pro after 2 failed verification rounds (bash **and** GitHub CI status), hysteresis back to Flash, persisted per-session state + metrics · `npm test` |
+| `benchmark/` | **v0.4 Flash-vs-Pro benchmark** — identical tasks via `dsh headless --json`, real token usage, labeled results in `benchmark/results.json` |
 
 ## Quick start
 
@@ -63,7 +64,7 @@ Then restart `dsh web` and hard-refresh the browser.
 | Security boundaries | `mimo-v2.6-pro` | `high` |
 | 2 failed test-fix iterations | switch to `mimo-v2.6-pro` | `high` |
 
-Default stays on Flash for cost; escalate with `/model` in the composer, or let `dsh-plugin-mimo-escalator` switch automatically: 2 consecutive failed verification rounds → Pro (high reasoning), 2 consecutive passing rounds → back to Flash.
+Default stays on Flash for cost; escalate with `/model` in the composer, or let `dsh-plugin-mimo-escalator` switch automatically: 2 consecutive failed verification rounds → Pro (high reasoning), 2 consecutive passing rounds → back to Flash. Every round, escalation, and demotion is persisted per workspace to the gitignored `mimo-escalator-state.json` (72 h TTL) with counters and a transition history.
 
 ### 2. Verification gates (`AGENTS.md`)
 
@@ -111,10 +112,12 @@ plugin · escalator unit tests ........... PASS   node --test (zero-dependency b
 1. **Inspect first, paste nothing.** Derive every API from the DSH checkout: tool-result hook (`packages/core/tools`), model/reasoning switch surface (`packages/llm/llm-pi-ai` — per-model `reasoningEfforts`, no `extraBody`), and the manifest shape of an installed `@michengai/dsh-*` plugin.
 2. **MVP before extras:** `src/state.js` (2-strike + hysteresis) · `src/index.js` (Cordis wiring) · `cordis.patch.yml` + `package.json` (top-level-array patch, `manifestVersion: 1`) · `test/state.test.js` (`node --test`, exit 0).
 3. **Wire into this repo:** `verify.sh` check #8, an `npm test` CI job, README benchmark only with labeled/sourced numbers.
-4. **Deferred (v0.4+):** MCP-aware read-only detection, metrics, standalone stdio MCP server, persistence/TTL, multi-agent relay.
+4. **Deferred (v0.5+):** standalone stdio MCP server, multi-agent relay. *(Shipped in v0.4: metrics, persistence/TTL, MCP-aware CI detection, benchmark.)*
 
 ### Multi-agent relay design notes (v0.5)
 
+- **Role-scoped connector packs** — planner (github + memory + context7, pinned Pro) · scouts (repo/DB/docs read-only, parallel Flash) · builder (write + shell, single-writer lock, 2-strike escalation) · verifier (playwright + E2E, single-browser lock). DSH isolates MCP tools per agent scope, so scoping also cuts per-request tool-schema tokens and KV-cache churn.
+- **Verified connector packages (2026-11-17):** `@upstash/context7-mcp` ✅ `4.7.3` · `@modelcontextprotocol/server-postgres` ✅ `0.6.2` · `@modelcontextprotocol/server-sqlite` ❌ **does not exist — do not use**
 - **Per-role escalator keys** — `<workspace>:<role>` (e.g. `repo:builder`) so a builder's 2-strike failure never escalates the planner.
 - **Sequential relay** — Planner (Pro, read-only) → Builder (Flash, workspace-write lock) → Verifier (Flash, browser/dev-server lock); only read-only discovery runs in parallel.
 - **Handoff contract** — planner emits file list + test plan; verifier reports defects, never patches; builder exits only on test/lint exit `0`.
@@ -126,7 +129,7 @@ plugin · escalator unit tests ........... PASS   node --test (zero-dependency b
 | **v0.1** | Config kit + install/verify scripts + gates | ✅ |
 | **v0.2** | CI: fresh-machine reproducibility gate + secret scan + badge | ✅ |
 | **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed test rounds · spec in issue #1 | ✅ |
-| **v0.4** | Metrics + benchmark (labeled synthetic or real usage) · MCP-aware read-only detection | ⬜ |
+| **v0.4** | Metrics + benchmark (labeled synthetic or real usage) · MCP-aware read-only detection | ✅ |
 | **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role `<workspace>:<role>` escalator keys, sequential connector locks | ⬜ |
 | **v1.0** | Case study: pipeline builds a full MLOps project end-to-end | ⬜ |
 

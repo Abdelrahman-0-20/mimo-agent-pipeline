@@ -1,0 +1,17 @@
+# Benchmark overlay — used as: dsh headless --patch benchmark/model-overlay.yml
+# Identical runs for both models; the model comes from $BENCH_MODEL so the
+# methodology differs by exactly one variable. Credentials resolve through the
+# global DSH credentials store via the apiKeyEnv reference (never this file).
+- id: llm-pi-ai
+  config:
+    providers:
+      xiaomi-token-plan-sgp:
+        apiKeyEnv: XIAOMI_TOKEN_PLAN_SGP_API_KEY
+- id: agent-default-model
+  config:
+    provider: xiaomi-token-plan-sgp
+    model: !!js process.env.BENCH_MODEL || 'mimo-v2.6-flash'
+# The headless template disables credentials-local; the stored provider key
+# lives in the global credentials service (the web Models page writes it).
+- id: credentials
+  disabled: false

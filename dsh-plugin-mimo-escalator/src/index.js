@@ -1,14 +1,25 @@
 /**
- * dsh-plugin-mimo-escalator — mimo-agent-pipeline v0.3.
+ * dsh-plugin-mimo-escalator — mimo-agent-pipeline v0.4.
  *
- * Watches verification rounds (test/lint/typecheck shell commands) and
- * escalates the session's model from the cheap base (Flash) to the strong
- * target (Pro) after `threshold` consecutive failed rounds, restoring the
- * original selection after `demoteThreshold` consecutive passes — the
- * roadmap's "Flash -> Pro after 2 failed test rounds", with hysteresis.
+ * Watches verification rounds — local bash test/lint/typecheck commands and,
+ * when `ciDetection` is on, GitHub CI status queries through the github MCP
+ * server — and escalates the session's model from the cheap base (Flash) to
+ * the strong target (Pro) after `threshold` consecutive failed rounds,
+ * restoring the original selection after `demoteThreshold` consecutive
+ * passes: the roadmap's "Flash -> Pro after 2 failed test rounds", with
+ * hysteresis.
+ *
+ * v0.4 adds durability and metrics: every counted round is persisted to
+ * `statePath` (default `mimo-escalator-state.json`, one file per workspace —
+ * the repo gitignores it), carrying the hysteresis snapshot, the selection to
+ * restore on demotion, round counters, escalation counters, and a capped
+ * transition history. Entries older than `stateTtlHours` are pruned on load;
+ * a missing or corrupt file simply starts a fresh cycle.
  *
  * Extension points, verified against the DSH source checkout:
- *  - `tools/result` observes frozen bash outcomes (`packages/core/tools`).
+ *  - `tools/result` observes frozen tool outcomes (`packages/core/tools`);
+ *    bash foreground results carry the exit code, MCP results carry the
+ *    canonical `McpResult` value.
  *  - `agent.model.select()` durably switches the session's model
  *    (`packages/core/agent/src/model-selection.ts`); the session
  *    controller's model-switch notice tells the model what changed.
@@ -18,8 +29,12 @@
  * `;` or `|` masking (`npm test | tail` is ignored on purpose). A timeout
  * counts as a failure; aborts, sandbox denials, background jobs, signals,
  * and tool-level errors are ignored — they are not verification outcomes.
+ * CI status is counted only for explicit success/failure states; pending or
+ * unrecognized payloads are ignored.
  */
+import { isAbsolute, join } from 'node:path'
 import { EscalationState } from './state.js'
+import { applySnapshot, countRound, entryFor, loadStore, recordTransition, saveStore } from './store.js'
 
 /** Leading shell noise stripped before matching: assignments, env/command/time, npx flags. */
 const LEADING_WRAPPERS = /^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+|env\s+|command\s+|time\s+|npx\s+(?:--?[A-Za-z][\w-]*\s+)*)+/
@@ -37,6 +52,9 @@ const VERIFY_PATTERNS = [
   /^git\s+diff\s+--check\b/,
 ]
 
+/** MCP tools whose result is an explicit GitHub CI verdict for a pull request. */
+const CI_STATUS_TOOLS = new Set(['mcp__github__get_pull_request_status'])
+
 /**
  * Whether the command's final action is a verification run.
  * Only the last `&&`/`||`/`;`/`|` segment counts, because that segment owns
@@ -52,13 +70,64 @@ export function isVerificationCommand(command) {
 }
 
 /**
- * Classify one bash tool outcome as a verification round.
- * @param {{ name?: string, arguments?: unknown }} exec - the frozen tool execution.
- * @param {{ isError?: boolean, value?: unknown }} result - the frozen tool result.
+ * Pull the GitHub status payload out of a canonical MCP value: a direct
+ * `state` field, `structuredContent`, or a JSON text block.
+ * @param {unknown} value - the tool result's `value`.
+ * @returns {Record<string, unknown> | null}
+ */
+function ciPayload(value) {
+  if (value === null || typeof value !== 'object') return null
+  if (typeof value.state === 'string') return value
+  if (value.structuredContent !== null && typeof value.structuredContent === 'object') {
+    return value.structuredContent
+  }
+  if (Array.isArray(value.content)) {
+    for (const block of value.content) {
+      if (block !== null && typeof block === 'object' && block.type === 'text' && typeof block.text === 'string') {
+        try {
+          const parsed = JSON.parse(block.text)
+          if (parsed !== null && typeof parsed === 'object') return parsed
+        } catch {
+          // not JSON — keep scanning remaining blocks
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Classify one GitHub CI status result as a verification round.
+ * @param {string} name - exact MCP tool name.
+ * @param {{ isError?: boolean, value?: unknown } | null} result - frozen tool result.
+ * @returns {'pass' | 'fail' | null}
+ */
+function ciOutcome(name, result) {
+  if (!CI_STATUS_TOOLS.has(name)) return null
+  if (result === null || typeof result !== 'object' || result.isError !== false) return null
+  const payload = ciPayload(result.value)
+  if (payload === null) return null
+  if (payload.state === 'success') return 'pass'
+  if (payload.state === 'failure' || payload.state === 'error') return 'fail'
+  return null
+}
+
+/**
+ * Classify one tool outcome as a verification round.
+ * @param {{ name?: string, arguments?: unknown } | null} exec - the frozen tool execution.
+ * @param {{ isError?: boolean, value?: unknown } | null} result - the frozen tool result.
+ * @param {{ ciDetection?: boolean }} [options] - detection toggles from Config.
  * @returns {'pass' | 'fail' | null} null when this call is not a countable round.
  */
-export function roundOutcome(exec, result) {
-  if (exec === null || typeof exec !== 'object' || exec.name !== 'bash') return null
+export function roundOutcome(exec, result, options = {}) {
+  if (exec === null || typeof exec !== 'object') return null
+  const name = exec.name
+  if (typeof name !== 'string') return null
+  if (name.startsWith('mcp__')) {
+    if (options.ciDetection === false) return null
+    return ciOutcome(name, result)
+  }
+  if (name !== 'bash') return null
   const args = exec.arguments
   if (args === null || typeof args !== 'object' || typeof args.command !== 'string') return null
   if (!isVerificationCommand(args.command)) return null
@@ -80,6 +149,9 @@ const DEFAULTS = {
   model: 'mimo-v2.6-pro',
   reasoningEffort: 'high',
   provider: undefined,
+  statePath: 'mimo-escalator-state.json',
+  stateTtlHours: 72,
+  ciDetection: true,
 }
 
 function issue(path, message) {
@@ -148,7 +220,31 @@ export const Config = {
         }
       }
 
-      const known = new Set([...Object.keys(DEFAULTS), 'threshold', 'demoteThreshold'])
+      if (input.statePath !== undefined) {
+        if (typeof input.statePath !== 'string') {
+          issues.push(issue('statePath', 'statePath must be a string (empty disables persistence)'))
+        } else {
+          value.statePath = input.statePath
+        }
+      }
+
+      if (input.stateTtlHours !== undefined) {
+        if (!Number.isInteger(input.stateTtlHours) || input.stateTtlHours < 0 || input.stateTtlHours > 87_600) {
+          issues.push(issue('stateTtlHours', 'stateTtlHours must be an integer between 0 and 87600 (0 keeps entries forever)'))
+        } else {
+          value.stateTtlHours = input.stateTtlHours
+        }
+      }
+
+      if (input.ciDetection !== undefined) {
+        if (typeof input.ciDetection !== 'boolean') {
+          issues.push(issue('ciDetection', 'ciDetection must be a boolean'))
+        } else {
+          value.ciDetection = input.ciDetection
+        }
+      }
+
+      const known = new Set(Object.keys(DEFAULTS))
       for (const key of Object.keys(input)) {
         if (!known.has(key)) issues.push(issue(key, `unknown option "${key}"`))
       }
@@ -159,44 +255,139 @@ export const Config = {
 }
 
 /**
- * Mount the escalator: observe verification rounds for every agent and switch
- * the session's durable model selection at the hysteresis thresholds.
+ * Mount the escalator: observe verification rounds for every agent, switch
+ * the session's durable model selection at the hysteresis thresholds, and
+ * persist state plus metrics to `statePath`.
  * @param {import('@deepseek-ai/cordis').Context} ctx - the plugin's context.
- * @param {ReturnType<typeof Config> extends { '~standard': infer S } ? unknown : never} config - validated row config.
+ * @param {object} config - validated row config.
  */
 export function apply(ctx, config) {
-  /** @type {Map<string, { state: EscalationState, original: Record<string, unknown> | null }>} */
+  /** @type {Map<string, { state: EscalationState, original: object | null }>} */
   const sessions = new Map()
+  /** @type {Map<string, { store: object }>} */
+  const stores = new Map()
+  let warnedPersistence = false
+
+  const warnPersistence = (reason) => {
+    if (warnedPersistence || config.statePath === '') return
+    warnedPersistence = true
+    console.warn(`[mimo-escalator] persistence disabled (${reason}); running in-memory only`)
+  }
+
+  /** Absolute store path for this session, or undefined when persistence is off. */
+  const storePathFor = (agent) => {
+    if (typeof config.statePath !== 'string' || config.statePath === '') return undefined
+    if (isAbsolute(config.statePath)) return config.statePath
+    const workingDirectory = ctx.get('workingDirectory')
+    if (workingDirectory === undefined) {
+      warnPersistence('workingDirectory service unavailable')
+      return undefined
+    }
+    try {
+      const dir = workingDirectory.get(agent.session)
+      if (typeof dir !== 'string' || dir === '') {
+        warnPersistence('session has no working directory')
+        return undefined
+      }
+      return join(dir, config.statePath)
+    } catch (error) {
+      warnPersistence(`working directory lookup failed: ${error?.message ?? error}`)
+      return undefined
+    }
+  }
+
+  /** Load (once per path, TTL-pruned) the shared store file. */
+  const slotFor = (path) => {
+    let slot = stores.get(path)
+    if (slot === undefined) {
+      slot = { store: loadStore(path, { ttlMs: config.stateTtlHours * 3_600_000 }) }
+      stores.set(path, slot)
+    }
+    return slot
+  }
 
   ctx.on('tools/result', (exec, result) => {
     try {
       const agent = exec.agent
       if (agent === undefined || agent === null) return
-      const outcome = roundOutcome(exec, result)
+      const outcome = roundOutcome(exec, result, { ciDetection: config.ciDetection })
       if (outcome === null) return
       const current = agent.model.current()
       if (current === undefined) return
 
-      const key = agent.session.id
-      let entry = sessions.get(key)
-      if (entry === undefined) {
-        entry = {
-          state: new EscalationState({ threshold: config.threshold, demoteThreshold: config.demoteThreshold }),
-          original: null,
+      const id = agent.session.id
+      const now = Date.now()
+      const path = storePathFor(agent)
+
+      // Hydrate once per session: rebuild the hysteresis state and the
+      // selection to restore from the persisted entry, when there is one.
+      let mem = sessions.get(id)
+      if (mem === undefined) {
+        let initial
+        let original = null
+        if (path !== undefined) {
+          try {
+            const entry = entryFor(slotFor(path).store, id, now)
+            initial = { strikes: entry.strikes, passes: entry.passes, escalated: entry.escalated }
+            original = entry.original !== null && typeof entry.original === 'object' ? entry.original : null
+          } catch (error) {
+            warnPersistence(`state load failed: ${error?.message ?? error}`)
+          }
         }
-        sessions.set(key, entry)
+        mem = {
+          state: new EscalationState({
+            threshold: config.threshold,
+            demoteThreshold: config.demoteThreshold,
+            ...(initial === undefined ? {} : { initial }),
+          }),
+          original,
+        }
+        sessions.set(id, mem)
       }
 
       // Count only while the session is on the base model, or on the target
       // this plugin escalated to — a manual /model choice is never overridden.
       const onBase = current.model === config.baseModel
-      const onOurs = current.model === config.model && entry.state.escalated
+      const onOurs = current.model === config.model && mem.state.escalated
       if (!onBase && !onOurs) return
 
-      const { action } = entry.state.recordRound(outcome === 'fail')
+      const { action } = mem.state.recordRound(outcome === 'fail')
+
+      let transition = null
+      if (action === 'escalate') {
+        mem.original = { ...current }
+        transition = { from: current.model, to: config.model }
+      } else if (action === 'demote') {
+        const target = mem.original ?? { provider: current.provider, model: config.baseModel }
+        mem.original = null
+        transition = { from: current.model, to: target.model }
+        mem.restored = target
+      }
+
+      // Persist snapshot + metrics before acting, so a failed switch never
+      // loses the round that was already observed.
+      let entry
+      if (path !== undefined) {
+        try {
+          const slot = slotFor(path)
+          entry = entryFor(slot.store, id, now)
+          applySnapshot(entry, mem.state.snapshot(), now)
+          countRound(entry, outcome, now)
+          if (action === 'escalate') {
+            entry.original = { ...mem.original }
+            recordTransition(entry, 'escalate', transition.from, transition.to, now)
+          } else if (action === 'demote') {
+            entry.original = null
+            recordTransition(entry, 'demote', transition.from, transition.to, now)
+          }
+          saveStore(path, slot.store)
+        } catch (error) {
+          entry = undefined
+          console.warn('[mimo-escalator] state persistence failed:', error)
+        }
+      }
 
       if (action === 'escalate') {
-        entry.original = { ...current }
         agent.model.select({
           provider: config.provider ?? current.provider,
           model: config.model,
@@ -204,9 +395,13 @@ export function apply(ctx, config) {
             ? { reasoningEffort: config.reasoningEffort }
             : {}),
         })
-      } else if (action === 'demote' && entry.original !== null) {
-        agent.model.select(entry.original)
-        entry.original = null
+        const rounds = entry === undefined ? '' : `, rounds: fail=${entry.rounds.fail} pass=${entry.rounds.pass} escalation#${entry.escalations}`
+        console.info(`[mimo-escalator] escalate ${id}: ${transition.from} -> ${transition.to}${rounds}`)
+      } else if (action === 'demote') {
+        agent.model.select(mem.restored)
+        mem.restored = null
+        const rounds = entry === undefined ? '' : `, rounds: fail=${entry.rounds.fail} pass=${entry.rounds.pass} demotion#${entry.demotions}`
+        console.info(`[mimo-escalator] demote ${id}: ${transition.from} -> ${transition.to}${rounds}`)
       }
     } catch (error) {
       // An observer must never break tool-result notification.

@@ -74,3 +74,30 @@ test('non-verification and non-bash calls are ignored', () => {
   assert.equal(roundOutcome({ name: 'bash' }, success({ kind: 'foreground', exitCode: 1 })), null)
   assert.equal(roundOutcome(null, success({ kind: 'foreground', exitCode: 1 })), null)
 })
+
+// --- v0.4: GitHub CI status via the github MCP server ----------------------
+
+const statusExec = { name: 'mcp__github__get_pull_request_status', arguments: { owner: 'o', repo: 'r', pull_number: 1 } }
+const ciResult = (value) => ({ isError: false, value })
+
+test('github CI status states classify as rounds', () => {
+  assert.equal(roundOutcome(statusExec, ciResult({ state: 'success', statuses: [] })), 'pass')
+  assert.equal(roundOutcome(statusExec, ciResult({ state: 'failure', statuses: [] })), 'fail')
+  assert.equal(roundOutcome(statusExec, ciResult({ state: 'error' })), 'fail')
+  assert.equal(roundOutcome(statusExec, ciResult({ state: 'pending', statuses: [] })), null)
+  assert.equal(roundOutcome(statusExec, ciResult({ state: 'in_progress' })), null)
+  assert.equal(roundOutcome(statusExec, ciResult({})), null)
+})
+
+test('ci payload parses from direct state, structuredContent, or text block', () => {
+  assert.equal(roundOutcome(statusExec, ciResult({ structuredContent: { state: 'success' } })), 'pass')
+  assert.equal(roundOutcome(statusExec, ciResult({ content: [{ type: 'text', text: '{"state":"failure"}' }] })), 'fail')
+  assert.equal(roundOutcome(statusExec, ciResult({ content: [{ type: 'text', text: 'not json' }] })), null)
+})
+
+test('CI detection ignores errors, other MCP tools, and the off switch', () => {
+  assert.equal(roundOutcome(statusExec, { isError: true, value: { state: 'failure' } }), null)
+  assert.equal(roundOutcome({ name: 'mcp__github__get_pull_request', arguments: {} }, ciResult({ state: 'success' })), null)
+  assert.equal(roundOutcome(statusExec, ciResult({ state: 'failure' }), { ciDetection: false }), null)
+  assert.equal(roundOutcome(statusExec, ciResult({ state: 'success' }), { ciDetection: true }), 'pass')
+})

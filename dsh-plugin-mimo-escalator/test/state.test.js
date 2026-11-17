@@ -85,3 +85,28 @@ test('rejects invalid options', () => {
   assert.throws(() => new EscalationState({ threshold: 1.5 }), RangeError)
   assert.throws(() => new EscalationState({ demoteThreshold: -1 }), RangeError)
 })
+
+test('hydrates from a persisted snapshot and continues the cycle', () => {
+  const state = new EscalationState({ initial: { strikes: 1, passes: 0, escalated: false } })
+  assert.equal(state.strikes, 1)
+  assert.equal(state.recordRound(true).action, 'escalate') // second strike completes it
+})
+
+test('snapshot round-trips through restore', () => {
+  const original = new EscalationState()
+  original.recordRound(true)
+  original.recordRound(true)
+  const restored = new EscalationState({ initial: original.snapshot() })
+  assert.deepEqual(restored.snapshot(), original.snapshot())
+  assert.equal(restored.escalated, true)
+  assert.equal(restored.recordRound(false).action, 'none')
+  assert.equal(restored.recordRound(false).action, 'demote') // cycle continues correctly
+})
+
+test('restore ignores unusable stored values', () => {
+  const state = new EscalationState({ initial: { strikes: 'x', passes: -5, escalated: 'yes' } })
+  assert.deepEqual(state.snapshot(), { strikes: 0, passes: 0, escalated: false })
+  state.restore(null)
+  state.restore(undefined)
+  assert.deepEqual(state.snapshot(), { strikes: 0, passes: 0, escalated: false })
+})

@@ -9,3 +9,10 @@
         baseModel: mimo-v2.6-flash
         model: mimo-v2.6-pro
         reasoningEffort: high
+        # v0.4 durability + metrics: one file per workspace (gitignored),
+        # entries pruned after this many hours (0 keeps them forever).
+        statePath: mimo-escalator-state.json
+        stateTtlHours: 72
+        # Count GitHub CI status queries (mcp__github__get_pull_request_status)
+        # as verification rounds alongside local bash commands.
+        ciDetection: true
