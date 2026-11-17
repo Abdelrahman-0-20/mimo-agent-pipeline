@@ -97,19 +97,48 @@ function ciPayload(value) {
 }
 
 /**
- * Classify one GitHub CI status result as a verification round.
- * @param {string} name - exact MCP tool name.
- * @param {{ isError?: boolean, value?: unknown } | null} result - frozen tool result.
- * @returns {'pass' | 'fail' | null}
+ * Classify one tool outcome as a verification round, reporting why a call
+ * was not countable when it was not.
+ * @param {{ name?: string, arguments?: unknown } | null} exec - the frozen tool execution.
+ * @param {{ isError?: boolean, value?: unknown } | null} result - the frozen tool result.
+ * @param {{ ciDetection?: boolean }} [options] - detection toggles from Config.
+ * @returns {{ outcome: 'pass' | 'fail' | null, skip: string | null }}
  */
-function ciOutcome(name, result) {
-  if (!CI_STATUS_TOOLS.has(name)) return null
-  if (result === null || typeof result !== 'object' || result.isError !== false) return null
-  const payload = ciPayload(result.value)
-  if (payload === null) return null
-  if (payload.state === 'success') return 'pass'
-  if (payload.state === 'failure' || payload.state === 'error') return 'fail'
-  return null
+export function classifyRound(exec, result, options = {}) {
+  if (exec === null || typeof exec !== 'object') return { outcome: null, skip: 'no-exec' }
+  const name = exec.name
+  if (typeof name !== 'string') return { outcome: null, skip: 'no-tool-name' }
+  if (name.startsWith('mcp__')) {
+    if (options.ciDetection === false) return { outcome: null, skip: 'ci-detection-off' }
+    if (!CI_STATUS_TOOLS.has(name)) return { outcome: null, skip: 'not-a-ci-status-tool' }
+    if (result === null || typeof result !== 'object') return { outcome: null, skip: 'no-result' }
+    if (result.isError !== false) return { outcome: null, skip: 'tool-error' }
+    const payload = ciPayload(result.value)
+    if (payload === null) return { outcome: null, skip: 'no-ci-payload' }
+    if (payload.state === 'success') return { outcome: 'pass', skip: null }
+    if (payload.state === 'failure' || payload.state === 'error') return { outcome: 'fail', skip: null }
+    return { outcome: null, skip: `ci-state-${String(payload.state ?? 'unknown')}` }
+  }
+  if (name !== 'bash') return { outcome: null, skip: 'not-bash' }
+  const args = exec.arguments
+  if (args === null || typeof args !== 'object' || typeof args.command !== 'string') {
+    return { outcome: null, skip: 'no-command' }
+  }
+  if (!isVerificationCommand(args.command)) return { outcome: null, skip: 'not-verification' }
+  if (result === null || typeof result !== 'object') return { outcome: null, skip: 'no-result' }
+  if (result.isError !== false) return { outcome: null, skip: 'tool-error' }
+  const value = result.value
+  if (value === null || typeof value !== 'object') return { outcome: null, skip: 'no-value' }
+  if (value.kind !== 'foreground') return { outcome: null, skip: `kind-${String(value.kind ?? 'unknown')}` }
+  if (value.aborted === true) return { outcome: null, skip: 'aborted' }
+  if (value.sandbox !== undefined && value.sandbox !== null && value.sandbox.denied === true) {
+    return { outcome: null, skip: 'sandbox-denied' }
+  }
+  if (value.timedOut === true) return { outcome: 'fail', skip: null }
+  if (typeof value.exitCode === 'number') {
+    return { outcome: value.exitCode === 0 ? 'pass' : 'fail', skip: null }
+  }
+  return { outcome: null, skip: `no-exit-code${value.signal ? `-signal-${value.signal}` : ''}` }
 }
 
 /**
@@ -120,25 +149,7 @@ function ciOutcome(name, result) {
  * @returns {'pass' | 'fail' | null} null when this call is not a countable round.
  */
 export function roundOutcome(exec, result, options = {}) {
-  if (exec === null || typeof exec !== 'object') return null
-  const name = exec.name
-  if (typeof name !== 'string') return null
-  if (name.startsWith('mcp__')) {
-    if (options.ciDetection === false) return null
-    return ciOutcome(name, result)
-  }
-  if (name !== 'bash') return null
-  const args = exec.arguments
-  if (args === null || typeof args !== 'object' || typeof args.command !== 'string') return null
-  if (!isVerificationCommand(args.command)) return null
-  if (result === null || typeof result !== 'object' || result.isError !== false) return null
-  const value = result.value
-  if (value === null || typeof value !== 'object' || value.kind !== 'foreground') return null
-  if (value.aborted === true) return null
-  if (value.sandbox !== undefined && value.sandbox !== null && value.sandbox.denied === true) return null
-  if (value.timedOut === true) return 'fail'
-  if (typeof value.exitCode === 'number') return value.exitCode === 0 ? 'pass' : 'fail'
-  return null
+  return classifyRound(exec, result, options).outcome
 }
 
 /** Plugin defaults; the Config schema fills every omitted field with these. */
@@ -306,14 +317,107 @@ export function apply(ctx, config) {
     return slot
   }
 
+  const registerStatusTool = () => {
+    const tools = ctx.get('tools')
+    if (tools === undefined) {
+      warnPersistence('tools service unavailable; mescal_status not registered')
+      return
+    }
+    tools.register({
+      name: 'mescal_status',
+      description: 'Report the MiMo escalator state, persisted metrics, and store diagnostics for this session. Read-only.',
+      parameters: {},
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['sessionId', 'model', 'state', 'metrics', 'storePath', 'persistence', 'diagnostics'],
+          properties: {
+            sessionId: { type: 'string' },
+            model: { oneOf: [{ type: 'object' }, { type: 'null' }] },
+            state: { oneOf: [{ type: 'object' }, { type: 'null' }] },
+            metrics: { oneOf: [{ type: 'object' }, { type: 'null' }] },
+            storePath: { oneOf: [{ type: 'string' }, { type: 'null' }] },
+            persistence: { type: 'string' },
+            diagnostics: { type: 'object' },
+          },
+        },
+        render(_args, value) {
+          return [{ type: 'text', text: JSON.stringify(value, null, 2) }]
+        },
+      },
+      async execute(_args, exec) {
+        const agent = exec.agent
+        if (agent === undefined || agent === null) {
+          return { sessionId: '', model: null, state: null, metrics: null, storePath: null, persistence: 'no-agent', diagnostics: { ...diagnostics } }
+        }
+        const id = agent.session.id
+        const path = storePathFor(agent)
+        const mem = sessions.get(id)
+        let metrics = null
+        if (path !== undefined) {
+          try {
+            const entry = slotFor(path).store.sessions[id]
+            if (entry !== undefined) {
+              metrics = {
+                rounds: entry.rounds,
+                escalations: entry.escalations ?? 0,
+                demotions: entry.demotions ?? 0,
+                firstSeen: entry.firstSeen ?? null,
+                updatedAt: entry.updatedAt ?? null,
+                history: entry.history ?? [],
+              }
+            }
+          } catch {
+            // fall through with metrics null
+          }
+        }
+        return {
+          sessionId: id,
+          model: agent.model.current() ?? null,
+          state: mem?.state.snapshot() ?? null,
+          metrics,
+          storePath: path,
+          persistence: config.statePath === '' ? 'disabled-by-config' : path === undefined ? 'unavailable' : 'active',
+          diagnostics: { ...diagnostics },
+        }
+      },
+    })
+  }
+  registerStatusTool()
+
+  /** Why the most recent tool result was not counted (or that it was). */
+  const diagnostics = { lastSkip: null, lastCounted: null }
+  const noteSkip = (reason, exec) => {
+    diagnostics.lastSkip = {
+      reason,
+      tool: exec !== null && typeof exec === 'object' ? exec.name ?? null : null,
+      at: new Date().toISOString(),
+    }
+  }
+
   ctx.on('tools/result', (exec, result) => {
     try {
       const agent = exec.agent
-      if (agent === undefined || agent === null) return
-      const outcome = roundOutcome(exec, result, { ciDetection: config.ciDetection })
-      if (outcome === null) return
+      if (agent === undefined || agent === null) {
+        noteSkip('no-agent', exec)
+        return
+      }
+      const { outcome, skip } = classifyRound(exec, result, { ciDetection: config.ciDetection })
+      if (outcome === null) {
+        noteSkip(skip, exec)
+        return
+      }
       const current = agent.model.current()
-      if (current === undefined) return
+      if (current === undefined) {
+        noteSkip('no-current-model', exec)
+        return
+      }
+      diagnostics.lastCounted = {
+        outcome,
+        tool: exec.name,
+        at: new Date().toISOString(),
+      }
 
       const id = agent.session.id
       const now = Date.now()

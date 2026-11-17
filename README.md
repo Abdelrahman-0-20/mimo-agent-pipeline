@@ -64,7 +64,7 @@ Then restart `dsh web` and hard-refresh the browser.
 | Security boundaries | `mimo-v2.6-pro` | `high` |
 | 2 failed verification rounds | auto-switch to `mimo-v2.6-pro` | `high` |
 
-Default stays on Flash for cost. The escalator plugin watches verification rounds — local `bash` commands and, with `ciDetection: true`, GitHub CI status queries — and flips the session tier with full hysteresis (promotion after 2 failures, demotion after 2 passes). Every transition is persisted per workspace to the gitignored `mimo-escalator-state.json` (72 h TTL) with counters and history.
+Default stays on Flash for cost. The escalator plugin watches verification rounds — local `bash` commands and, with `ciDetection: true`, GitHub CI status queries — and flips the session tier with full hysteresis (promotion after 2 failures, demotion after 2 passes). Every transition is persisted per workspace to the gitignored `mimo-escalator-state.json` (72 h TTL) with counters and history — inspect it any time with the read-only `mescal_status` tool, which also reports why the most recent tool result was not counted.
 
 ### 2. Verification gates (`AGENTS.md`)
 

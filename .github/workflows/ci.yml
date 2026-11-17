@@ -24,6 +24,7 @@ jobs:
           npx -y js-yaml@5.5.0 <(sed 's/!!js //g' config/cordis.patch.yml.example) > /dev/null && echo "cordis template OK"
           npx -y js-yaml@5.5.0 config/settings.yaml.example > /dev/null && echo "settings template OK"
           npx -y js-yaml@5.5.0 dsh-plugin-mimo-escalator/cordis.patch.yml > /dev/null && echo "escalator patch OK"
+          npx -y js-yaml@5.5.0 <(sed 's/!!js //g' benchmark/model-overlay.yml) > /dev/null && echo "benchmark overlay OK"
 
       - name: Secret scan
         run: |
