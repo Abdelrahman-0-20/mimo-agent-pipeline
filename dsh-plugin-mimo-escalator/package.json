@@ -14,11 +14,13 @@
   ],
   "exports": {
     ".": "./src/index.js",
+    "./mcp-server": "./mcp-server.mjs",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg"
   },
   "files": [
     "src",
+    "mcp-server.mjs",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg"

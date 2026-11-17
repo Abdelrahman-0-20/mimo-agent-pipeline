@@ -32,12 +32,12 @@ flowchart TD
 | Path | Purpose |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | Verification gates: recall first, verify before done (exit code 0), persist learnings, no `.env` access |
-| [`config/cordis.patch.yml.example`](config/cordis.patch.yml.example) | Pipeline config template — MiMo routes + reasoning levels + 3 MCP servers (sanitized) |
+| [`config/cordis.patch.yml.example`](config/cordis.patch.yml.example) | Pipeline config template — MiMo routes + reasoning levels + 4 MCP servers (sanitized) |
 | [`config/settings.yaml.example`](config/settings.yaml.example) | Same routing in DSH's `settings.yaml` style |
 | [`install.sh`](install.sh) | Installs the 3 MichengAI plugins + the local escalator & relay bundles + pinned memory server |
-| [`verify.sh`](verify.sh) | Exit-code-0 gate: proves all 9 components mounted via `dsh --dump-config` |
-| [`dsh-plugin-mimo-escalator/`](dsh-plugin-mimo-escalator/) | **Original plugin (v0.3–v0.5)** — auto Flash↔Pro escalation with hysteresis, per-role `<workspace>:<role>` state keys, per-workspace persistence, metrics, CI-status detection · `npm test` |
-| [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) | **Original plugin (v0.5)** — `mimo_relay` tool: Planner→Builder→Verifier over the `spawn` backend with role presets, connector locks, schema-checked handoff · `npm test` |
+| [`verify.sh`](verify.sh) | Exit-code-0 gate: proves all 10 components mounted via `dsh --dump-config` |
+| [`dsh-plugin-mimo-escalator/`](dsh-plugin-mimo-escalator/) | **Original plugin (v0.3–v0.6)** — auto Flash↔Pro escalation with hysteresis, per-role `<workspace>:<role>` state keys, persistence, metrics, CI-status detection, thinking-off-on-discovery effort policy, standalone stdio MCP server (`mcp-server.mjs`) · `npm test` |
+| [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) | **Original plugin (v0.5/v0.6)** — `mimo_relay` tool: Planner→Builder→Verifier over the `spawn` backend with role presets, connector locks, schema-checked handoff, per-role tool scoping (builder 85 → 9 schemas) · `npm test` |
 | [`benchmark/`](benchmark/) | **v0.4 benchmark** — identical tasks via `dsh headless --json`, real token usage in [`benchmark/results.json`](benchmark/results.json) |
 
 ## Quick start
@@ -49,7 +49,7 @@ git clone https://github.com/Abdelrahman-0-20/mimo-agent-pipeline.git
 cd mimo-agent-pipeline
 ./install.sh                              # plugins + escalator + relay + memory server
 # merge config/cordis.patch.yml.example into $DSH_HOME/profiles/<profile>/cordis.patch.yml
-./verify.sh                               # must print 9x PASS and exit 0
+./verify.sh                               # must print 10x PASS and exit 0
 ```
 
 Then restart `dsh web` and hard-refresh the browser.
@@ -81,6 +81,7 @@ Default stays on Flash for cost. The escalator plugin watches verification round
 | `memory` | `mcp__memory__search_nodes`, `mcp__memory__create_entities` | Cross-session knowledge graph (`~/.dsh/memory.jsonl`) |
 | `github` | `mcp__github__*` | PRs, issues, CI failure logs (needs `GITHUB_TOKEN`) |
 | `playwright` | `mcp__playwright__*` | Screenshots fed into MiMo's native vision input |
+| `context7` | `mcp__context7__*` | **v0.6** live API docs (keyless) — read today's APIs instead of recalling stale ones |
 
 ## The escalator plugin
 
@@ -95,6 +96,9 @@ Shipped in v0.3, hardened in v0.4. Pure-JS, zero runtime dependencies, correct D
 | `statePath` | `mimo-escalator-state.json` | per-workspace state file (gitignored) |
 | `stateTtlHours` | `72` | prune idle entries (`0` = keep forever) |
 | `ciDetection` | `true` | count `mcp__github__get_pull_request_status` as a verification round |
+| `discoveryEffortOff` | `true` | **v0.6** thinking-off-on-discovery: effort → `off` during discovery streaks |
+| `discoverySteps` | `3` | consecutive read-only results before the effort goes off |
+| `minToggleGapMs` | `15000` | debounce between OFF flips (work always restores immediately) |
 
 **Evidence:** `npm test` → **29/29 pass, exit 0** (`node --test`, zero dependencies). Spec, inspect-first checklist, and review notes live in **[issue #1](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/issues/1)**.
 
@@ -134,7 +138,8 @@ PASS  MCP github server
 PASS  MCP playwright server
 PASS  MiMo auto-escalation plugin (Flash->Pro, 2 strikes)
 PASS  Multi-agent relay (Planner->Builder->Verifier)
-9 passed, 0 failed
+PASS  context7 live-docs connector
+10 passed, 0 failed
 ```
 
 ## Continuous integration
@@ -161,6 +166,22 @@ One bundle — [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) — installs t
 
 **Deferred:** parallel scout fan-out, shared-reader locks, cross-relay snapshot isolation, file-based handoff artifacts.
 
+## Cost & reach (v0.6, shipped)
+
+Four levers, each verified live:
+
+- **Thinking-off-on-discovery** — the escalator's effort policy classifies every tool result (reads/grep/docs = discovery, everything else = work), flips `reasoningEffort` to `off` after `discoverySteps` consecutive discovery results (debounced by `minToggleGapMs`; a single work result restores the saved effort immediately), and goes dormant while the tier escalator owns the selection. Every toggle records a `tokenMeter` sample (total tokens + baseline/cache-read when available) into the state file — **compare cache-read before/after an OFF flip before trusting the savings**. Live cycle proven: `effort {off: 1, on: 1}` with the model selection flipping `off` → adapter default.
+- **Connector-pack token cuts** — at `agent/created`, relay-role children receive `tools.restrict({deny})`: a common noise list (experts, teams, subagents, scheduling, inspection, relay recursion) plus **only the host MCP servers the role does not preset-mount**, so a deny name can never collide with the role's own scoped connector. Live: builder **85 → 9 tool schemas (−89%)**, verifier → 32, planner → 43 (keeps github/memory/context7 by design).
+- **context7 live-docs** — `@upstash/context7-mcp` `4.7.3` (keyless) added to the config template's MCP section; `verify.sh` check #10 proves it mounts (**10/10**).
+- **Standalone stdio MCP server** — [`dsh-plugin-mimo-escalator/mcp-server.mjs`](dsh-plugin-mimo-escalator/mcp-server.mjs): zero-dependency JSON-RPC over stdio exposing the *same* state machine and store as `mescal_status` and `mescal_record_round`, so Cursor / Claude Code / VS Code hooks can drive escalation decisions:
+
+  ```bash
+  claude mcp add escalator -- node /path/to/dsh-plugin-mimo-escalator/mcp-server.mjs
+  # optional: MIMO_ESCALATOR_STATE=... MIMO_ESCALATOR_THRESHOLD=2 MIMO_ESCALATOR_DEMOTE_THRESHOLD=2
+  ```
+
+**Evidence:** 42 escalator + 20 relay tests (`node --test`, exit 0); `verify.sh` **10/10**; a live effort off/on cycle with persisted tokenMeter samples; a live relay re-run under scoping (plan → build `pass` → verifier `defects: []`, all locks released).
+
 ## Roadmap
 
 | Version | Ships | Status |
@@ -170,7 +191,7 @@ One bundle — [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) — installs t
 | **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed rounds (original code) | ✅ |
 | **v0.4** | Metrics + persistence/TTL + CI-status detection + real-usage benchmark | ✅ |
 | **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role keys, connector locks | ✅ |
-| **v0.6** | **Cost & reach** — thinking-off-on-discovery · role-scoped connector packs · `context7` live-docs connector (check #10) · standalone stdio MCP server for other editors | ⬜ |
+| **v0.6** | **Cost & reach** — thinking-off-on-discovery · role-scoped connector packs · `context7` live-docs connector (check #10) · standalone stdio MCP server for other editors | ✅ |
 | **v0.7** | **Public launch** — final secret scan → repo goes public · demo GIF (memory recall + one relay run) · GitHub profile README + repo descriptions | ⬜ |
 | **v1.0** | Case study: the pipeline builds a full MLOps project end-to-end via the relay · harder benchmark tasks | ⬜ |
 

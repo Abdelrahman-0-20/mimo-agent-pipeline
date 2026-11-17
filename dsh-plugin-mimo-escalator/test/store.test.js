@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import {
   STORE_VERSION,
   HISTORY_CAP,
+  EFFORT_SAMPLE_CAP,
   emptyStore,
   newEntry,
   isUsableEntry,
@@ -15,6 +16,7 @@ import {
   applySnapshot,
   countRound,
   recordTransition,
+  recordEffortToggle,
 } from '../src/store.js'
 
 function tempDir() {
@@ -124,4 +126,24 @@ test('recordTransition increments counters and caps history', () => {
   }
   assert.equal(entry.history.length, HISTORY_CAP, 'history stays capped')
   assert.equal(entry.history[HISTORY_CAP - 1].action, 'escalate')
+})
+
+test('recordEffortToggle counts toggles, keeps token samples, and caps them', () => {
+  const entry = newEntry(0)
+  recordEffortToggle(entry, 'off', { totalTokens: 1000, cacheReadTokens: 500, baselineKind: 'usage' }, 10)
+  recordEffortToggle(entry, 'on', null, 20)
+  assert.equal(entry.effort.off, 1)
+  assert.equal(entry.effort.on, 1)
+  assert.equal(entry.effort.samples.length, 2)
+  assert.equal(entry.effort.samples[0].cacheReadTokens, 500, 'cache-read sample retained for before/after comparison')
+  assert.equal(entry.effort.samples[0].action, 'off')
+
+  // legacy entries without an effort block gain one lazily
+  const legacy = { strikes: 0, passes: 0, escalated: false }
+  recordEffortToggle(legacy, 'off', null, 30)
+  assert.equal(legacy.effort.off, 1)
+
+  const capped = newEntry(0)
+  for (let i = 0; i < EFFORT_SAMPLE_CAP + 5; i++) recordEffortToggle(capped, 'off', null, i)
+  assert.equal(capped.effort.samples.length, EFFORT_SAMPLE_CAP, 'samples stay capped')
 })

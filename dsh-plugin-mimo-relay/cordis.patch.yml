@@ -12,6 +12,8 @@
         workerReasoningEffort: null
         timeoutMs: 1920000
         phaseTimeoutMs: 600000
+        # v0.6: hide irrelevant global tool schemas from relay children
+        toolScoping: true
 
     # --- role packs (connector-scoped presets) -------------------------
     # Verified connectors only: context7 @upstash/context7-mcp 4.7.3,

@@ -34,7 +34,8 @@
  */
 import { basename, isAbsolute, join } from 'node:path'
 import { EscalationState } from './state.js'
-import { applySnapshot, countRound, entryFor, loadStore, recordTransition, saveStore } from './store.js'
+import { EffortPolicy } from './effort.js'
+import { applySnapshot, countRound, entryFor, loadStore, recordEffortToggle, recordTransition, saveStore } from './store.js'
 
 /** Leading shell noise stripped before matching: assignments, env/command/time, npx flags. */
 const LEADING_WRAPPERS = /^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+|env\s+|command\s+|time\s+|npx\s+(?:--?[A-Za-z][\w-]*\s+)*)+/
@@ -176,6 +177,9 @@ const DEFAULTS = {
   statePath: 'mimo-escalator-state.json',
   stateTtlHours: 72,
   ciDetection: true,
+  discoveryEffortOff: true,
+  discoverySteps: 3,
+  minToggleGapMs: 15_000,
 }
 
 function issue(path, message) {
@@ -268,6 +272,30 @@ export const Config = {
         }
       }
 
+      if (input.discoveryEffortOff !== undefined) {
+        if (typeof input.discoveryEffortOff !== 'boolean') {
+          issues.push(issue('discoveryEffortOff', 'discoveryEffortOff must be a boolean'))
+        } else {
+          value.discoveryEffortOff = input.discoveryEffortOff
+        }
+      }
+
+      if (input.discoverySteps !== undefined) {
+        if (!Number.isInteger(input.discoverySteps) || input.discoverySteps < 1 || input.discoverySteps > 20) {
+          issues.push(issue('discoverySteps', 'discoverySteps must be an integer between 1 and 20'))
+        } else {
+          value.discoverySteps = input.discoverySteps
+        }
+      }
+
+      if (input.minToggleGapMs !== undefined) {
+        if (!Number.isInteger(input.minToggleGapMs) || input.minToggleGapMs < 0 || input.minToggleGapMs > 600_000) {
+          issues.push(issue('minToggleGapMs', 'minToggleGapMs must be an integer between 0 and 600000'))
+        } else {
+          value.minToggleGapMs = input.minToggleGapMs
+        }
+      }
+
       const known = new Set(Object.keys(DEFAULTS))
       for (const key of Object.keys(input)) {
         if (!known.has(key)) issues.push(issue(key, `unknown option "${key}"`))
@@ -341,6 +369,73 @@ export function apply(ctx, config) {
     return slot
   }
 
+  // v0.6 thinking-off-on-discovery: debounced effort toggling on top of the
+  // same agent.model.select mechanism the tier escalator already uses.
+  const effortPolicy = new EffortPolicy({
+    discoverySteps: config.discoverySteps,
+    minToggleGapMs: config.minToggleGapMs,
+  })
+  const tokenMeter = ctx.get('tokenMeter')
+
+  /** tokenMeter snapshot for one toggle — the "measure before trusting" sample. */
+  const effortSample = (agent) => {
+    if (tokenMeter === undefined) return null
+    try {
+      const measured = tokenMeter.measure(agent.session)
+      const usage = measured?.baseline?.usage
+      return {
+        totalTokens: measured?.totalTokens ?? null,
+        baselineKind: measured?.baseline?.kind ?? null,
+        inputTokens: usage?.inputTokens ?? null,
+        cacheReadTokens: usage?.cacheReadTokens ?? null,
+        reasoningTokens: usage?.reasoningTokens ?? null,
+      }
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Observe one executed tool for the effort policy. Runs for every tool
+   * result — discovery tools are mostly non-verification rounds, so this
+   * must happen before round gating. Dormant (and reset) while the tier
+   * escalator owns the selection.
+   */
+  const observeEffort = (agent, exec, ctxInfo) => {
+    if (config.discoveryEffortOff !== true) return
+    const sessionId = agent.session.id
+    const mem = sessions.get(ctxInfo.key)
+    if (mem?.state.escalated === true) {
+      effortPolicy.reset(sessionId)
+      return
+    }
+    const current = agent.model.current()
+    if (current === undefined) return
+    const decision = effortPolicy.observe(sessionId, exec?.name ?? '', current.reasoningEffort)
+    if (decision === null) return
+
+    if (decision.action === 'off') {
+      agent.model.select({ ...current, reasoningEffort: 'off' })
+    } else {
+      const payload = { ...current }
+      if (decision.effort === undefined || decision.effort === null) delete payload.reasoningEffort
+      else payload.reasoningEffort = decision.effort
+      agent.model.select(payload)
+    }
+
+    if (ctxInfo.path !== undefined) {
+      try {
+        const slot = slotFor(ctxInfo.path)
+        const entry = entryFor(slot.store, ctxInfo.key, ctxInfo.now)
+        recordEffortToggle(entry, decision.action, effortSample(agent), ctxInfo.now)
+        saveStore(ctxInfo.path, slot.store)
+      } catch (error) {
+        console.warn('[mimo-escalator] effort metrics persistence failed:', error)
+      }
+    }
+    console.info(`[mimo-escalator] effort ${decision.action} ${ctxInfo.key} (${sessionId.slice(0, 8)})`)
+  }
+
   const registerStatusTool = () => {
     const tools = ctx.get('tools')
     if (tools === undefined) {
@@ -355,7 +450,7 @@ export function apply(ctx, config) {
         schema: {
           type: 'object',
           additionalProperties: false,
-          required: ['sessionId', 'stateKey', 'role', 'model', 'state', 'metrics', 'storePath', 'persistence', 'diagnostics'],
+          required: ['sessionId', 'stateKey', 'role', 'model', 'state', 'metrics', 'storePath', 'persistence', 'diagnostics', 'effortState'],
           properties: {
             sessionId: { type: 'string' },
             stateKey: { type: 'string' },
@@ -366,6 +461,7 @@ export function apply(ctx, config) {
             storePath: { oneOf: [{ type: 'string' }, { type: 'null' }] },
             persistence: { type: 'string' },
             diagnostics: { type: 'object' },
+            effortState: { oneOf: [{ type: 'object' }, { type: 'null' }] },
           },
         },
         render(_args, value) {
@@ -375,7 +471,7 @@ export function apply(ctx, config) {
       async execute(_args, exec) {
         const agent = exec.agent
         if (agent === undefined || agent === null) {
-          return { sessionId: '', stateKey: '', role: '', model: null, state: null, metrics: null, storePath: null, persistence: 'no-agent', diagnostics: { ...diagnostics } }
+          return { sessionId: '', stateKey: '', role: '', model: null, state: null, metrics: null, storePath: null, persistence: 'no-agent', diagnostics: { ...diagnostics }, effortState: null }
         }
         const dir = dirFor(agent)
         const role = roleFor(agent)
@@ -394,6 +490,7 @@ export function apply(ctx, config) {
                 firstSeen: entry.firstSeen ?? null,
                 updatedAt: entry.updatedAt ?? null,
                 history: entry.history ?? [],
+                effort: entry.effort ?? null,
               }
             }
           } catch {
@@ -410,6 +507,7 @@ export function apply(ctx, config) {
           storePath: path,
           persistence: config.statePath === '' ? 'disabled-by-config' : path === undefined ? 'unavailable' : 'active',
           diagnostics: { ...diagnostics },
+          effortState: effortPolicy.stateOf(agent.session.id),
         }
       },
     })
@@ -433,6 +531,17 @@ export function apply(ctx, config) {
         noteSkip('no-agent', exec)
         return
       }
+
+      const now = Date.now()
+      const dir = dirFor(agent)
+      const role = roleFor(agent)
+      const key = stateKeyFor(dir, role)
+      const path = storePathFor(dir)
+
+      // v0.6 effort policy first: it observes every tool result, including
+      // the discovery rounds that never count as verification.
+      observeEffort(agent, exec, { now, key, path })
+
       const { outcome, skip } = classifyRound(exec, result, { ciDetection: config.ciDetection })
       if (outcome === null) {
         noteSkip(skip, exec)
@@ -448,12 +557,6 @@ export function apply(ctx, config) {
         tool: exec.name,
         at: new Date().toISOString(),
       }
-
-      const now = Date.now()
-      const dir = dirFor(agent)
-      const role = roleFor(agent)
-      const key = stateKeyFor(dir, role)
-      const path = storePathFor(dir)
 
       // Hydrate once per role domain: rebuild the hysteresis state and the
       // selection to restore from the persisted entry, when there is one.
@@ -490,6 +593,7 @@ export function apply(ctx, config) {
       // still parked on the target — send it back without counting a round.
       if (!onBase && !onOurs && current.model === config.model && !mem.state.escalated && mem.original !== null) {
         agent.model.select(mem.original)
+        effortPolicy.reset(agent.session.id)
         console.info(`[mimo-escalator] adopt-demotion ${key}: ${current.model} -> ${mem.original.model}`)
         return
       }
@@ -539,11 +643,13 @@ export function apply(ctx, config) {
             ? { reasoningEffort: config.reasoningEffort }
             : {}),
         })
+        effortPolicy.reset(agent.session.id)
         const rounds = entry === undefined ? '' : `, rounds: fail=${entry.rounds.fail} pass=${entry.rounds.pass} escalation#${entry.escalations}`
         console.info(`[mimo-escalator] escalate ${key}: ${transition.from} -> ${transition.to}${rounds}`)
       } else if (action === 'demote') {
         agent.model.select(mem.restored)
         mem.restored = null
+        effortPolicy.reset(agent.session.id)
         const rounds = entry === undefined ? '' : `, rounds: fail=${entry.rounds.fail} pass=${entry.rounds.pass} demotion#${entry.demotions}`
         console.info(`[mimo-escalator] demote ${key}: ${transition.from} -> ${transition.to}${rounds}`)
       } else if (onBase && mem.state.escalated) {
@@ -556,6 +662,7 @@ export function apply(ctx, config) {
             ? { reasoningEffort: config.reasoningEffort }
             : {}),
         })
+        effortPolicy.reset(agent.session.id)
         console.info(`[mimo-escalator] adopt-escalation ${key}: ${current.model} -> ${config.model}`)
       }
     } catch (error) {

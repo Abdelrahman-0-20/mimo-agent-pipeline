@@ -222,6 +222,31 @@ test('concurrent relays never overlap the same connector', async () => {
   assert.deepEqual(locks.snapshot(), {})
 })
 
+test('role deny lists never name a preset or essential tool', async () => {
+  const { COMMON_TOOL_DENY, ROLE_TOOL_DENY } = await import('../src/index.js')
+  // Tools a relay child must always keep: its preset-mounted tools (bash/fs/
+  // search, context7), the session cwd tool, and the capture tool.
+  const ESSENTIALS = [
+    'bash', 'read', 'write', 'edit', 'apply_patch', 'grep', 'read_image',
+    'working_directory', 'structured_output',
+    'mcp__context7__query-docs', 'mcp__context7__resolve-library-id',
+  ]
+  for (const name of [...COMMON_TOOL_DENY, ...Object.values(ROLE_TOOL_DENY).flat()]) {
+    assert.ok(!ESSENTIALS.includes(name), `deny must never name an essential tool: ${name}`)
+    assert.ok(!name.includes('*'), 'restrict() takes exact names — wildcards would throw')
+  }
+  // Each role denies ONLY the host servers it does not preset-mount, so a
+  // deny name can never collide with its own scoped connector of the same name.
+  assert.ok(ROLE_TOOL_DENY.planner.every(n => n.startsWith('mcp__playwright__')), 'planner keeps github+memory')
+  assert.ok(!ROLE_TOOL_DENY.planner.some(n => n.startsWith('mcp__github__') || n.startsWith('mcp__memory__')))
+  assert.ok(ROLE_TOOL_DENY.verifier.every(n => n.startsWith('mcp__github__') || n.startsWith('mcp__memory__')), 'verifier keeps playwright')
+  assert.ok(!ROLE_TOOL_DENY.verifier.some(n => n.startsWith('mcp__playwright__')))
+  for (const role of ['scout', 'builder']) {
+    assert.ok(ROLE_TOOL_DENY[role].some(n => n.startsWith('mcp__github__')))
+    assert.ok(ROLE_TOOL_DENY[role].some(n => n.startsWith('mcp__playwright__')))
+  }
+})
+
 test('phase and role mappings and prompt contracts', () => {
   assert.deepEqual(PHASES, ['plan', 'build', 'verify'])
   assert.equal(lockForPhase('plan', 'ws'), 'reader:ws')

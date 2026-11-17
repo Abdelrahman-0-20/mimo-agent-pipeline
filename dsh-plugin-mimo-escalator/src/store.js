@@ -43,6 +43,7 @@ export function newEntry(now) {
     escalations: 0,
     demotions: 0,
     history: [],
+    effort: { off: 0, on: 0, samples: [] },
   }
 }
 
@@ -140,6 +141,31 @@ export function countRound(entry, outcome, now) {
   entry.rounds[outcome] = (entry.rounds[outcome] ?? 0) + 1
   entry.updatedAt = now
 }
+
+/**
+ * Record an effort toggle with its token sample (v0.6 "measure before
+ * trusting the savings"): counters plus a capped sample list carrying the
+ * tokenMeter snapshot taken at the toggle, so cache-read behavior before and
+ * after OFF flips can be compared honestly.
+ * @param {object} entry - live entry (older entries gain `effort` lazily).
+ * @param {'off' | 'on'} action - toggle direction.
+ * @param {object | null} sample - tokenMeter snapshot fields (or null when unavailable).
+ * @param {number} now - epoch milliseconds.
+ */
+export function recordEffortToggle(entry, action, sample, now) {
+  if (entry.effort === null || typeof entry.effort !== 'object') {
+    entry.effort = { off: 0, on: 0, samples: [] }
+  }
+  entry.effort[action] = (entry.effort[action] ?? 0) + 1
+  entry.effort.samples.push({ at: new Date(now).toISOString(), action, ...(sample ?? {}) })
+  if (entry.effort.samples.length > EFFORT_SAMPLE_CAP) {
+    entry.effort.samples.splice(0, entry.effort.samples.length - EFFORT_SAMPLE_CAP)
+  }
+  entry.updatedAt = now
+}
+
+/** Cap on retained per-toggle token samples. */
+export const EFFORT_SAMPLE_CAP = 30
 
 /**
  * Record an escalation transition and append capped history.

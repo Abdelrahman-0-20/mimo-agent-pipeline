@@ -30,6 +30,9 @@ const DEFAULTS = {
   workerReasoningEffort: null,
   timeoutMs: 1_920_000,
   phaseTimeoutMs: 600_000,
+  // v0.6 token cut: hide irrelevant globals from relay children at
+  // agent/created (deny lists in ROLE_TOOL_DENY / COMMON_TOOL_DENY).
+  toolScoping: true,
 }
 
 function issue(path, message) {
@@ -105,6 +108,14 @@ export const Config = {
         }
       }
 
+      if (input.toolScoping !== undefined) {
+        if (typeof input.toolScoping !== 'boolean') {
+          issues.push(issue('toolScoping', 'toolScoping must be a boolean'))
+        } else {
+          value.toolScoping = input.toolScoping
+        }
+      }
+
       const known = new Set(Object.keys(DEFAULTS))
       for (const key of Object.keys(input)) {
         if (!known.has(key)) issues.push(issue(key, `unknown option "${key}"`))
@@ -127,6 +138,68 @@ const REPORT_SCHEMA = {
   },
 }
 
+/** Globals no relay child ever needs (all verified present in live child headers). */
+export const COMMON_TOOL_DENY = [
+  'get_expert_team', 'list_expert_teams', 'list_experts',
+  'summon_expert', 'summon_experts', 'summon_expert_team',
+  'propose_custom_expert', 'open_custom_expert_editor',
+  'propose_expert_team', 'open_expert_team_editor',
+  'mescal_status', 'mimo_relay',
+  'list_mcp_resource_templates', 'list_mcp_resources', 'read_mcp_resource',
+  'subagent_claude_code', 'subagent_codex',
+  'team_task_create', 'team_task_get', 'team_task_list', 'team_task_update',
+]
+
+const GITHUB_TOOLS = [
+  'add_issue_comment', 'create_branch', 'create_issue', 'create_or_update_file',
+  'create_pull_request', 'create_pull_request_review', 'create_repository', 'fork_repository',
+  'get_file_contents', 'get_issue', 'get_pull_request', 'get_pull_request_comments',
+  'get_pull_request_files', 'get_pull_request_reviews', 'get_pull_request_status',
+  'list_commits', 'list_issues', 'list_pull_requests', 'merge_pull_request', 'push_files',
+  'search_code', 'search_issues', 'search_repositories', 'search_users',
+  'update_issue', 'update_pull_request_branch',
+]
+
+const MEMORY_TOOLS = [
+  'add_observations', 'create_entities', 'create_relations', 'delete_entities',
+  'delete_observations', 'delete_relations', 'open_nodes', 'read_graph', 'search_nodes',
+]
+
+const PLAYWRIGHT_TOOLS = [
+  'browser_click', 'browser_close', 'browser_console_messages', 'browser_drag', 'browser_drop',
+  'browser_emulate_media', 'browser_evaluate', 'browser_file_upload', 'browser_fill_form',
+  'browser_find', 'browser_handle_dialog', 'browser_hover', 'browser_navigate',
+  'browser_navigate_back', 'browser_network_request', 'browser_network_requests',
+  'browser_press_key', 'browser_resize', 'browser_run_code_unsafe', 'browser_select_option',
+  'browser_snapshot', 'browser_tabs', 'browser_take_screenshot', 'browser_type', 'browser_wait_for',
+]
+
+const mcpNames = (server, tools) => tools.map(name => `mcp__${server}__${name}`)
+
+/**
+ * Host MCP servers each role does NOT preset-mount. Denying only these can
+ * never collide with a role's own scoped connectors (same server name, same
+ * tool names — the preset's copy would be masked too), which is why the
+ * lists are per role rather than global.
+ */
+export const ROLE_TOOL_DENY = {
+  planner: mcpNames('playwright', PLAYWRIGHT_TOOLS),
+  scout: [
+    ...mcpNames('github', GITHUB_TOOLS),
+    ...mcpNames('memory', MEMORY_TOOLS),
+    ...mcpNames('playwright', PLAYWRIGHT_TOOLS),
+  ],
+  builder: [
+    ...mcpNames('github', GITHUB_TOOLS),
+    ...mcpNames('memory', MEMORY_TOOLS),
+    ...mcpNames('playwright', PLAYWRIGHT_TOOLS),
+  ],
+  verifier: [
+    ...mcpNames('github', GITHUB_TOOLS),
+    ...mcpNames('memory', MEMORY_TOOLS),
+  ],
+}
+
 /**
  * Mount the relay tool.
  * @param {import('@deepseek-ai/cordis').Context} ctx - the plugin's context.
@@ -143,6 +216,34 @@ export function apply(ctx, config) {
   const locks = new LockRegistry()
   /** One relay at a time per process — this also stops recursive mimo_relay calls from children. */
   let activeRelay = false
+
+  // v0.6 connector-pack token cut: a relay child keeps only what its role
+  // needs. `restrict({deny})` masks GLOBAL and inherited names by exact
+  // name — so each role denies only the host MCP servers it does NOT
+  // preset-mount (no name can collide with its own scoped connectors) plus
+  // the always-irrelevant noise (experts, teams, subagents, scheduling…).
+  // The role's preset tools (bash/fs/search, own MCP) live in the preset
+  // layer and are never named, so they survive; structured_output is
+  // child-local and survives as well. Runs at agent/created — serial,
+  // awaited, before the first prompt — so the slim schema applies from
+  // step one. Fail-open: a name unknown on this DSH build logs a warning
+  // and leaves the child unsliced rather than breaking agent creation.
+  const agentPresets = ctx.get('agentPresets')
+  const RELAY_ROLES = new Set(['planner', 'scout', 'builder', 'verifier'])
+  ctx.on('agent/created', async ({ agent }) => {
+    try {
+      if (config.toolScoping !== true) return
+      const preset = agentPresets === undefined ? undefined : agentPresets.presetForSession(agent.session)
+      if (preset === undefined || preset === null || !RELAY_ROLES.has(preset)) return
+      const agentTools = agent.ctx.get('tools')
+      if (agentTools === undefined) return
+      const deny = [...COMMON_TOOL_DENY, ...ROLE_TOOL_DENY[preset]]
+      agentTools.restrict({ deny })
+      console.info(`[mimo-relay] scoped ${preset} child: hid ${deny.length} irrelevant global tool schemas`)
+    } catch (error) {
+      console.warn('[mimo-relay] tool scoping failed (child left unsliced):', error)
+    }
+  })
 
   tools.register({
     name: 'mimo_relay',

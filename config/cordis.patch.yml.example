@@ -64,3 +64,11 @@
         transport: stdio
         command: npx
         args: [ '-y', '@playwright/mcp@latest' ]
+    # v0.6: live-docs connector (verified @upstash/context7-mcp 4.7.3, keyless)
+    - id: mcp-context7
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: context7
+        transport: stdio
+        command: npx
+        args: [ '-y', '@upstash/context7-mcp' ]
