@@ -2,7 +2,7 @@
 
 > An end-to-end **autonomous engineering pipeline** for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — dual-model **Xiaomi MiMo** routing, persistent MCP memory, independent code review, and deterministic verification gates.
 
-![version](https://img.shields.io/badge/version-v0.2.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![CI](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/actions/workflows/ci.yml/badge.svg)
+![version](https://img.shields.io/badge/version-v0.3.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![CI](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/actions/workflows/ci.yml/badge.svg)
 
 ## What this is
 
@@ -34,8 +34,9 @@ flowchart TD
 | `AGENTS.md` | Verification gates: recall first, verify before done (exit code 0), persist learnings, no `.env` access |
 | `config/cordis.patch.yml.example` | **The pipeline config** — MiMo routes + reasoning levels + 3 MCP servers (sanitized template) |
 | `config/settings.yaml.example` | Same routing expressed in DSH's `settings.yaml` style |
-| `install.sh` | Installs the 3 plugins + pinned memory server into your DSH profile |
-| `verify.sh` | Exit-code-0 gate: proves all 7 components mounted via `dsh --dump-config` |
+| `install.sh` | Installs the 3 MichengAI plugins + the local escalator bundle + pinned memory server into your DSH profile |
+| `verify.sh` | Exit-code-0 gate: proves all 8 components mounted via `dsh --dump-config` |
+| `dsh-plugin-mimo-escalator/` | **v0.3 plugin (original code)** — auto Flash→Pro after 2 failed verification rounds, hysteresis back to Flash · `npm test` |
 
 ## Quick start
 
@@ -44,9 +45,9 @@ flowchart TD
 ```bash
 git clone https://github.com/Abdelrahman-0-20/mimo-agent-pipeline.git
 cd mimo-agent-pipeline
-./install.sh                              # plugins + memory server
+./install.sh                              # plugins + escalator + memory server
 # merge config/cordis.patch.yml.example into $DSH_HOME/profiles/<profile>/cordis.patch.yml
-./verify.sh                               # must print 7x PASS and exit 0
+./verify.sh                               # must print 8x PASS and exit 0
 ```
 
 Then restart `dsh web` and hard-refresh the browser.
@@ -62,7 +63,7 @@ Then restart `dsh web` and hard-refresh the browser.
 | Security boundaries | `mimo-v2.6-pro` | `high` |
 | 2 failed test-fix iterations | switch to `mimo-v2.6-pro` | `high` |
 
-Default stays on Flash for cost; escalate with `/model` in the composer.
+Default stays on Flash for cost; escalate with `/model` in the composer, or let `dsh-plugin-mimo-escalator` switch automatically: 2 consecutive failed verification rounds → Pro (high reasoning), 2 consecutive passing rounds → back to Flash.
 
 ### 2. Verification gates (`AGENTS.md`)
 
@@ -89,21 +90,23 @@ PASS  MiMo direct route (Pro/Flash)
 PASS  MCP memory server
 PASS  MCP github server
 PASS  MCP playwright server
-7 passed, 0 failed
+PASS  MiMo auto-escalation plugin (Flash->Pro, 2 strikes)
+8 passed, 0 failed
 ```
 
 ## Continuous integration
 
-Every push runs two jobs — and the pipeline job is an honest test: it reproduces the setup on a **clean Ubuntu runner** (install DSH → `install.sh` → merge config → `verify.sh`) and fails the build unless every component mounts.
+Every push runs three jobs — and the pipeline job is an honest test: it reproduces the setup on a **clean Ubuntu runner** (install DSH → `install.sh` → merge config → `verify.sh`) and fails the build unless every component mounts.
 
 ```text
 lint · yaml · secret-scan ............... PASS   shell syntax, YAML structure, no keys committed
-pipeline · fresh-machine reproducibility  PASS   DSH + 3 plugins + MCP config → verify.sh exit 0
+pipeline · fresh-machine reproducibility  PASS   DSH + 4 plugins + MCP config → verify.sh exit 0
+plugin · escalator unit tests ........... PASS   node --test (zero-dependency bundle)
 ```
 
 ## Build plan — v0.3 `dsh-plugin-mimo-escalator`
 
-Full spec: **[issue #1](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/issues/1)** — a fresh Creator Mode session starts there. Summary:
+**Status: shipped.** All four steps below are done (plugin lives in `dsh-plugin-mimo-escalator/`, `npm test` exit 0, `verify.sh` check #8, CI plugin job). Full spec: **[issue #1](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/issues/1)** — a fresh Creator Mode session starts there. Summary:
 
 1. **Inspect first, paste nothing.** Derive every API from the DSH checkout: tool-result hook (`packages/core/tools`), model/reasoning switch surface (`packages/llm/llm-pi-ai` — per-model `reasoningEfforts`, no `extraBody`), and the manifest shape of an installed `@michengai/dsh-*` plugin.
 2. **MVP before extras:** `src/state.js` (2-strike + hysteresis) · `src/index.js` (Cordis wiring) · `cordis.patch.yml` + `package.json` (top-level-array patch, `manifestVersion: 1`) · `test/state.test.js` (`node --test`, exit 0).
@@ -122,7 +125,7 @@ Full spec: **[issue #1](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/
 |---|---|---|
 | **v0.1** | Config kit + install/verify scripts + gates | ✅ |
 | **v0.2** | CI: fresh-machine reproducibility gate + secret scan + badge | ✅ |
-| **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed test rounds · spec in issue #1 | ⬜ next |
+| **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed test rounds · spec in issue #1 | ✅ |
 | **v0.4** | Metrics + benchmark (labeled synthetic or real usage) · MCP-aware read-only detection | ⬜ |
 | **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role `<workspace>:<role>` escalator keys, sequential connector locks | ⬜ |
 | **v1.0** | Case study: pipeline builds a full MLOps project end-to-end | ⬜ |

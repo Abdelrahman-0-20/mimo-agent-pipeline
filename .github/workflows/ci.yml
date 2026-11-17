@@ -20,6 +20,7 @@ jobs:
         run: |
           npx -y js-yaml@5.5.0 <(sed 's/!!js //g' config/cordis.patch.yml.example) > /dev/null && echo "cordis template OK"
           npx -y js-yaml@5.5.0 config/settings.yaml.example > /dev/null && echo "settings template OK"
+          npx -y js-yaml@5.5.0 dsh-plugin-mimo-escalator/cordis.patch.yml > /dev/null && echo "escalator patch OK"
 
       - name: Secret scan
         run: |
@@ -52,3 +53,17 @@ jobs:
 
       - name: Verification gate - must exit 0
         run: ./verify.sh
+
+  plugin:
+    name: plugin · escalator unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: node --test (zero-dependency bundle, no install step)
+        run: npm test
+        working-directory: dsh-plugin-mimo-escalator

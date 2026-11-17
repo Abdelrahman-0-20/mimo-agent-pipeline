@@ -1,0 +1,39 @@
+{
+  "name": "dsh-plugin-mimo-escalator",
+  "version": "0.3.0",
+  "description": "Auto-escalates a DeepSeek Harness session from mimo-v2.6-flash to mimo-v2.6-pro after two consecutive failed verification rounds, then returns to Flash after sustained passes.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "mimo",
+    "model-routing",
+    "escalation"
+  ],
+  "exports": {
+    ".": "./src/index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "src",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg"
+  ],
+  "icon": "./icon.svg",
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

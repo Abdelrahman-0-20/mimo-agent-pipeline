@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "MiMo escalator",
+    "description": "Escalates the session from mimo-v2.6-flash to mimo-v2.6-pro after two consecutive failed verification rounds, then returns to Flash after sustained passes."
+  }
+}

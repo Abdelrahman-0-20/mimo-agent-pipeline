@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "MiMo 升级器",
+    "description": "连续两轮验证失败后将会话模型从 mimo-v2.6-flash 升级到 mimo-v2.6-pro，连续通过后回落到 Flash。"
+  }
+}

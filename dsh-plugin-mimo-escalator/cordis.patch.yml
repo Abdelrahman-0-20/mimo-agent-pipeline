@@ -1,0 +1,11 @@
+# mimo-agent-pipeline v0.3 — dsh-plugin-mimo-escalator bundle patch.
+# Plain values only: this file never carries secrets, only model ids and thresholds.
+- insert:
+    - id: mimo-escalator
+      name: dsh-plugin-mimo-escalator
+      config:
+        threshold: 2
+        demoteThreshold: 2
+        baseModel: mimo-v2.6-flash
+        model: mimo-v2.6-pro
+        reasoningEffort: high

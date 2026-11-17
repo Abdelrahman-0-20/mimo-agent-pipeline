@@ -22,6 +22,7 @@ check "xiaomi-mimo"           "MiMo direct route (Pro/Flash + reasoning levels)"
 check "serverName: memory"    "MCP memory server"
 check "serverName: github"    "MCP github server"
 check "serverName: playwright" "MCP playwright server"
+check "mimo-escalator"         "MiMo auto-escalation plugin (Flash->Pro, 2 strikes)"
 
 echo "----"
 echo "$pass passed, $failed failed"
