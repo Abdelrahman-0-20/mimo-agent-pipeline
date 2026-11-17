@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "MiMo 中继",
+    "description": "运行 Planner→Builder→Verifier 三角色中继：按角色隔离的连接器包、按工作区的写入/浏览器锁，以及经 schema 校验的交接契约。"
+  }
+}

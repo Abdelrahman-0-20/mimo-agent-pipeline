@@ -34,9 +34,10 @@ flowchart TD
 | [`AGENTS.md`](AGENTS.md) | Verification gates: recall first, verify before done (exit code 0), persist learnings, no `.env` access |
 | [`config/cordis.patch.yml.example`](config/cordis.patch.yml.example) | Pipeline config template — MiMo routes + reasoning levels + 3 MCP servers (sanitized) |
 | [`config/settings.yaml.example`](config/settings.yaml.example) | Same routing in DSH's `settings.yaml` style |
-| [`install.sh`](install.sh) | Installs the 3 MichengAI plugins + the local escalator bundle + pinned memory server |
-| [`verify.sh`](verify.sh) | Exit-code-0 gate: proves all 8 components mounted via `dsh --dump-config` |
-| [`dsh-plugin-mimo-escalator/`](dsh-plugin-mimo-escalator/) | **Original plugin (v0.3/v0.4)** — auto Flash↔Pro escalation with hysteresis, per-workspace persistence, metrics, CI-status detection · `npm test` |
+| [`install.sh`](install.sh) | Installs the 3 MichengAI plugins + the local escalator & relay bundles + pinned memory server |
+| [`verify.sh`](verify.sh) | Exit-code-0 gate: proves all 9 components mounted via `dsh --dump-config` |
+| [`dsh-plugin-mimo-escalator/`](dsh-plugin-mimo-escalator/) | **Original plugin (v0.3–v0.5)** — auto Flash↔Pro escalation with hysteresis, per-role `<workspace>:<role>` state keys, per-workspace persistence, metrics, CI-status detection · `npm test` |
+| [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) | **Original plugin (v0.5)** — `mimo_relay` tool: Planner→Builder→Verifier over the `spawn` backend with role presets, connector locks, schema-checked handoff · `npm test` |
 | [`benchmark/`](benchmark/) | **v0.4 benchmark** — identical tasks via `dsh headless --json`, real token usage in [`benchmark/results.json`](benchmark/results.json) |
 
 ## Quick start
@@ -46,9 +47,9 @@ flowchart TD
 ```bash
 git clone https://github.com/Abdelrahman-0-20/mimo-agent-pipeline.git
 cd mimo-agent-pipeline
-./install.sh                              # plugins + escalator + memory server
+./install.sh                              # plugins + escalator + relay + memory server
 # merge config/cordis.patch.yml.example into $DSH_HOME/profiles/<profile>/cordis.patch.yml
-./verify.sh                               # must print 8x PASS and exit 0
+./verify.sh                               # must print 9x PASS and exit 0
 ```
 
 Then restart `dsh web` and hard-refresh the browser.
@@ -132,7 +133,8 @@ PASS  MCP memory server
 PASS  MCP github server
 PASS  MCP playwright server
 PASS  MiMo auto-escalation plugin (Flash->Pro, 2 strikes)
-8 passed, 0 failed
+PASS  Multi-agent relay (Planner->Builder->Verifier)
+9 passed, 0 failed
 ```
 
 ## Continuous integration
@@ -141,17 +143,23 @@ Every push runs three jobs — and the pipeline job is an honest test: it reprod
 
 ```text
 lint · yaml · secret-scan ............... PASS   shell syntax, YAML structure, no keys committed
-pipeline · fresh-machine reproducibility  PASS   DSH + 4 plugins + MCP config → verify.sh exit 0
-plugin · escalator unit tests ........... PASS   node --test (zero-dependency bundle)
+pipeline · fresh-machine reproducibility  PASS   DSH + 5 bundles + MCP config → verify.sh exit 0
+plugin · unit tests ..................... PASS   node --test (escalator + relay, zero-dependency)
 ```
 
-## Multi-agent relay (v0.5, in progress)
+## Multi-agent relay (v0.5, shipped)
+
+One bundle — [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) — installs the **`mimo_relay`** tool plus four role presets; the escalator keys its state per `<workspace>:<role>`.
 
 - **Role-scoped connector packs** — planner (github + memory + context7, pinned Pro) · scouts (repo/DB/docs read-only, parallel Flash) · builder (write + shell, single-writer lock, 2-strike escalation) · verifier (playwright + E2E, single-browser lock). DSH isolates MCP tools per agent scope, so scoping also cuts per-request tool-schema tokens and KV-cache churn.
 - **Verified connector packages (2026-11-17):** `@upstash/context7-mcp` ✅ `4.7.3` · `@modelcontextprotocol/server-postgres` ✅ `0.6.2` · `@modelcontextprotocol/server-sqlite` ❌ **does not exist — do not use**
-- **Per-role escalator keys** — `<workspace>:<role>` (e.g. `repo:builder`) so a builder's 2-strike failure never escalates the planner.
-- **Sequential relay** — Planner (Pro, read-only) → Builder (Flash, workspace-write lock) → Verifier (Flash, browser/dev-server lock); only read-only discovery runs in parallel.
-- **Handoff contract** — planner emits file list + test plan; verifier reports defects, never patches; builder exits only on test/lint exit `0`.
+- **Per-role escalator keys** — `<workspace>:<role>` (e.g. `repo:builder`) so a builder's 2-strike failure never escalates the planner. Escalation is role-level: every session of the role adopts it on its next counted round, and stale sessions return home after the role demotes. Store version bumped to v2 (v1 session-id keys load as empty).
+- **Sequential relay** — `mimo_relay` drives Planner (Pro, read-only) → Builder (Flash) → Verifier (Flash) over the DSH `spawn` subagent backend: each phase runs on its role preset, holds its connector lock (`reader:` / `writer:` / `browser:<workspace>`) for the whole phase, and passes its handoff through the backend's `outputSchema`. Locks are exclusive FIFO mutexes in v0.5 — parallel readers and cross-relay snapshot isolation are deferred.
+- **Handoff contract** — planner emits `{files, testPlan}`; the builder claims `status: "pass"` only when every testPlan command exited 0; the verifier reports `{defects, summary}` and never patches. Any contract violation aborts the relay at that phase with the reason.
+
+**Evidence:** 19 relay + 31 escalator unit tests (`node --test`, exit 0); `verify.sh` **9/9** including check #9; and a **live end-to-end relay run**: planner's `{files, testPlan}` → builder `status: "pass"` (byte-exact artifact, full testPlan green — both suites, `bash -n`, `node --check`, secret scan) → verifier `defects: []` with an independent audit of the builder's work; every connector lock released.
+
+**Deferred:** parallel scout fan-out, shared-reader locks, cross-relay snapshot isolation, file-based handoff artifacts.
 
 ## Roadmap
 
@@ -161,7 +169,7 @@ plugin · escalator unit tests ........... PASS   node --test (zero-dependency b
 | **v0.2** | CI: fresh-machine reproducibility gate + secret scan + badge | ✅ |
 | **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed rounds (original code) | ✅ |
 | **v0.4** | Metrics + persistence/TTL + CI-status detection + real-usage benchmark | ✅ |
-| **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role keys, connector locks | 🚧 in progress |
+| **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role keys, connector locks | ✅ |
 | **v0.6** | **Cost & reach** — thinking-off-on-discovery · role-scoped connector packs · `context7` live-docs connector (check #10) · standalone stdio MCP server for other editors | ⬜ |
 | **v0.7** | **Public launch** — final secret scan → repo goes public · demo GIF (memory recall + one relay run) · GitHub profile README + repo descriptions | ⬜ |
 | **v1.0** | Case study: the pipeline builds a full MLOps project end-to-end via the relay · harder benchmark tasks | ⬜ |

@@ -14,8 +14,9 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 
-/** Bump when the entry or fold semantics change; loaders drop other versions. */
-export const STORE_VERSION = 1
+/** Bump when the entry or fold semantics change; other versions load as empty.
+ * v2 = role-keyed entries (`<workspace>:<role>`); v1 session-id keys are dropped. */
+export const STORE_VERSION = 2
 
 /** Cap on per-session transition history so the file cannot grow without bound. */
 export const HISTORY_CAP = 50
@@ -77,7 +78,8 @@ export function loadStore(path, { ttlMs = 0, now = Date.now() } = {}) {
   } catch {
     return emptyStore()
   }
-  if (parsed === null || typeof parsed !== 'object' || parsed.sessions === null || typeof parsed.sessions !== 'object') {
+  if (parsed === null || typeof parsed !== 'object' || parsed.version !== STORE_VERSION
+    || parsed.sessions === null || typeof parsed.sessions !== 'object') {
     return emptyStore()
   }
   const store = emptyStore()

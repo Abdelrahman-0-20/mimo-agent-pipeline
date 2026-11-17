@@ -14,6 +14,9 @@ node_modules/
 mimo-escalator-state.json
 *.tmp
 
+# relay demo artifacts
+.relay-demo/
+
 # noise
 .DS_Store
 *.log

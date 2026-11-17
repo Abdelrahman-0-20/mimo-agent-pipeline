@@ -32,7 +32,7 @@
  * CI status is counted only for explicit success/failure states; pending or
  * unrecognized payloads are ignored.
  */
-import { isAbsolute, join } from 'node:path'
+import { basename, isAbsolute, join } from 'node:path'
 import { EscalationState } from './state.js'
 import { applySnapshot, countRound, entryFor, loadStore, recordTransition, saveStore } from './store.js'
 
@@ -150,6 +150,19 @@ export function classifyRound(exec, result, options = {}) {
  */
 export function roundOutcome(exec, result, options = {}) {
   return classifyRound(exec, result, options).outcome
+}
+
+/**
+ * Durable state key for one escalation domain: `<workspace>:<role>` (e.g.
+ * `repo:builder`), so a builder's strikes never escalate the planner and
+ * every session of one role within one workspace shares the cycle.
+ * @param {string | undefined} workspaceDir - the session's working directory.
+ * @param {string} role - agent preset id, or `main` for default sessions.
+ * @returns {string}
+ */
+export function stateKeyFor(workspaceDir, role) {
+  const ws = typeof workspaceDir === 'string' && workspaceDir !== '' ? basename(workspaceDir) : 'workspace'
+  return `${ws}:${role}`
 }
 
 /** Plugin defaults; the Config schema fills every omitted field with these. */
@@ -285,25 +298,36 @@ export function apply(ctx, config) {
     console.warn(`[mimo-escalator] persistence disabled (${reason}); running in-memory only`)
   }
 
-  /** Absolute store path for this session, or undefined when persistence is off. */
-  const storePathFor = (agent) => {
-    if (typeof config.statePath !== 'string' || config.statePath === '') return undefined
-    if (isAbsolute(config.statePath)) return config.statePath
+  /** The session's working directory, or undefined when it cannot be resolved. */
+  const dirFor = (agent) => {
     const workingDirectory = ctx.get('workingDirectory')
-    if (workingDirectory === undefined) {
-      warnPersistence('workingDirectory service unavailable')
-      return undefined
-    }
+    if (workingDirectory === undefined) return undefined
     try {
       const dir = workingDirectory.get(agent.session)
-      if (typeof dir !== 'string' || dir === '') {
-        warnPersistence('session has no working directory')
-        return undefined
-      }
-      return join(dir, config.statePath)
-    } catch (error) {
-      warnPersistence(`working directory lookup failed: ${error?.message ?? error}`)
+      return typeof dir === 'string' && dir !== '' ? dir : undefined
+    } catch {
       return undefined
+    }
+  }
+
+  /** Absolute store path for this workspace, or undefined when persistence is off. */
+  const storePathFor = (dir) => {
+    if (typeof config.statePath !== 'string' || config.statePath === '') return undefined
+    if (isAbsolute(config.statePath)) return config.statePath
+    if (dir === undefined) {
+      warnPersistence('session has no working directory')
+      return undefined
+    }
+    return join(dir, config.statePath)
+  }
+
+  /** The agent's role: its preset id, or `main` for default sessions. */
+  const roleFor = (agent) => {
+    const presets = ctx.get('agentPresets')
+    try {
+      return presets?.presetForSession?.(agent.session) ?? 'main'
+    } catch {
+      return 'main'
     }
   }
 
@@ -331,9 +355,11 @@ export function apply(ctx, config) {
         schema: {
           type: 'object',
           additionalProperties: false,
-          required: ['sessionId', 'model', 'state', 'metrics', 'storePath', 'persistence', 'diagnostics'],
+          required: ['sessionId', 'stateKey', 'role', 'model', 'state', 'metrics', 'storePath', 'persistence', 'diagnostics'],
           properties: {
             sessionId: { type: 'string' },
+            stateKey: { type: 'string' },
+            role: { type: 'string' },
             model: { oneOf: [{ type: 'object' }, { type: 'null' }] },
             state: { oneOf: [{ type: 'object' }, { type: 'null' }] },
             metrics: { oneOf: [{ type: 'object' }, { type: 'null' }] },
@@ -349,15 +375,17 @@ export function apply(ctx, config) {
       async execute(_args, exec) {
         const agent = exec.agent
         if (agent === undefined || agent === null) {
-          return { sessionId: '', model: null, state: null, metrics: null, storePath: null, persistence: 'no-agent', diagnostics: { ...diagnostics } }
+          return { sessionId: '', stateKey: '', role: '', model: null, state: null, metrics: null, storePath: null, persistence: 'no-agent', diagnostics: { ...diagnostics } }
         }
-        const id = agent.session.id
-        const path = storePathFor(agent)
-        const mem = sessions.get(id)
+        const dir = dirFor(agent)
+        const role = roleFor(agent)
+        const key = stateKeyFor(dir, role)
+        const path = storePathFor(dir)
+        const mem = sessions.get(key)
         let metrics = null
         if (path !== undefined) {
           try {
-            const entry = slotFor(path).store.sessions[id]
+            const entry = slotFor(path).store.sessions[key]
             if (entry !== undefined) {
               metrics = {
                 rounds: entry.rounds,
@@ -373,7 +401,9 @@ export function apply(ctx, config) {
           }
         }
         return {
-          sessionId: id,
+          sessionId: agent.session.id,
+          stateKey: key,
+          role,
           model: agent.model.current() ?? null,
           state: mem?.state.snapshot() ?? null,
           metrics,
@@ -419,19 +449,21 @@ export function apply(ctx, config) {
         at: new Date().toISOString(),
       }
 
-      const id = agent.session.id
       const now = Date.now()
-      const path = storePathFor(agent)
+      const dir = dirFor(agent)
+      const role = roleFor(agent)
+      const key = stateKeyFor(dir, role)
+      const path = storePathFor(dir)
 
-      // Hydrate once per session: rebuild the hysteresis state and the
+      // Hydrate once per role domain: rebuild the hysteresis state and the
       // selection to restore from the persisted entry, when there is one.
-      let mem = sessions.get(id)
+      let mem = sessions.get(key)
       if (mem === undefined) {
         let initial
         let original = null
         if (path !== undefined) {
           try {
-            const entry = entryFor(slotFor(path).store, id, now)
+            const entry = entryFor(slotFor(path).store, key, now)
             initial = { strikes: entry.strikes, passes: entry.passes, escalated: entry.escalated }
             original = entry.original !== null && typeof entry.original === 'object' ? entry.original : null
           } catch (error) {
@@ -446,13 +478,21 @@ export function apply(ctx, config) {
           }),
           original,
         }
-        sessions.set(id, mem)
+        sessions.set(key, mem)
       }
 
       // Count only while the session is on the base model, or on the target
       // this plugin escalated to — a manual /model choice is never overridden.
       const onBase = current.model === config.baseModel
       const onOurs = current.model === config.model && mem.state.escalated
+
+      // Role-stale session: the role already demoted but this session is
+      // still parked on the target — send it back without counting a round.
+      if (!onBase && !onOurs && current.model === config.model && !mem.state.escalated && mem.original !== null) {
+        agent.model.select(mem.original)
+        console.info(`[mimo-escalator] adopt-demotion ${key}: ${current.model} -> ${mem.original.model}`)
+        return
+      }
       if (!onBase && !onOurs) return
 
       const { action } = mem.state.recordRound(outcome === 'fail')
@@ -474,7 +514,7 @@ export function apply(ctx, config) {
       if (path !== undefined) {
         try {
           const slot = slotFor(path)
-          entry = entryFor(slot.store, id, now)
+          entry = entryFor(slot.store, key, now)
           applySnapshot(entry, mem.state.snapshot(), now)
           countRound(entry, outcome, now)
           if (action === 'escalate') {
@@ -500,12 +540,23 @@ export function apply(ctx, config) {
             : {}),
         })
         const rounds = entry === undefined ? '' : `, rounds: fail=${entry.rounds.fail} pass=${entry.rounds.pass} escalation#${entry.escalations}`
-        console.info(`[mimo-escalator] escalate ${id}: ${transition.from} -> ${transition.to}${rounds}`)
+        console.info(`[mimo-escalator] escalate ${key}: ${transition.from} -> ${transition.to}${rounds}`)
       } else if (action === 'demote') {
         agent.model.select(mem.restored)
         mem.restored = null
         const rounds = entry === undefined ? '' : `, rounds: fail=${entry.rounds.fail} pass=${entry.rounds.pass} demotion#${entry.demotions}`
-        console.info(`[mimo-escalator] demote ${id}: ${transition.from} -> ${transition.to}${rounds}`)
+        console.info(`[mimo-escalator] demote ${key}: ${transition.from} -> ${transition.to}${rounds}`)
+      } else if (onBase && mem.state.escalated) {
+        // Role-level escalation: the role is escalated but this session of
+        // the same role is still on the base model — switch it too.
+        agent.model.select({
+          provider: config.provider ?? current.provider,
+          model: config.model,
+          ...(config.reasoningEffort !== null && config.reasoningEffort !== undefined
+            ? { reasoningEffort: config.reasoningEffort }
+            : {}),
+        })
+        console.info(`[mimo-escalator] adopt-escalation ${key}: ${current.model} -> ${config.model}`)
       }
     } catch (error) {
       // An observer must never break tool-result notification.

@@ -1,0 +1,259 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { LockRegistry } from '../src/locks.js'
+import {
+  PHASES,
+  lockForPhase,
+  roleForPhase,
+  HANDOFF_SCHEMAS,
+  validateHandoff,
+  plannerPrompt,
+  builderPrompt,
+  verifierPrompt,
+  runRelay,
+} from '../src/relay.js'
+
+const WORKSPACE = '/repo'
+const BASE = {
+  task: 'Add a greet() function with tests',
+  workspace: WORKSPACE,
+  plannerModel: 'mimo-v2.6-pro',
+  workerModel: 'mimo-v2.6-flash',
+  plannerReasoningEffort: 'high',
+  workerReasoningEffort: null,
+}
+
+const PLAN = { files: ['src/greet.js', 'test/greet.test.js'], testPlan: 'npm test && npm run lint' }
+const BUILD = { status: 'pass', summary: 'implemented; npm test && npm run lint exit 0' }
+const CLEAN = { defects: [], summary: 'all green' }
+
+/**
+ * A scripted fake spawner: asserts each phase holds exactly its own lock
+ * while running, records the call, and returns the scripted result.
+ */
+function fakeSpawn(script, { locks, observed } = {}) {
+  return async ({ phase, role, prompt, model, reasoningEffort, outputSchema, signal }) => {
+    observed?.push({ phase, role, prompt, model, reasoningEffort, outputSchema, signal })
+    if (locks !== undefined) {
+      for (const p of PHASES) {
+        assert.equal(
+          locks.isHeld(lockForPhase(p, WORKSPACE)),
+          p === phase,
+          `${phase} phase must hold exactly the ${p === phase ? 'matching' : 'non-matching'} lock`,
+        )
+      }
+    }
+    const entry = script[role]
+    if (entry instanceof Error) throw entry
+    if (entry !== undefined && entry.stopReason !== undefined && entry.stopReason !== 'completed') {
+      return { structured: entry.structured, stopReason: entry.stopReason, diagnostic: entry.diagnostic, output: [] }
+    }
+    return { structured: entry?.structured, stopReason: 'completed', output: [] }
+  }
+}
+
+const happyScript = { planner: { structured: PLAN }, builder: { structured: BUILD }, verifier: { structured: CLEAN } }
+
+test('happy path runs plan → build → verify with roles, models, and locks', async () => {
+  const locks = new LockRegistry()
+  const observed = []
+  const report = await runRelay({ ...BASE, locks, spawn: fakeSpawn(happyScript, { locks, observed }) })
+
+  assert.equal(report.ok, true)
+  assert.equal(report.phase, 'done')
+  assert.deepEqual(report.plan, PLAN)
+  assert.deepEqual(report.build, BUILD)
+  assert.deepEqual(report.verify, CLEAN)
+  assert.deepEqual(observed.map(o => o.phase), ['plan', 'build', 'verify'])
+  assert.deepEqual(observed.map(o => o.role), ['planner', 'builder', 'verifier'])
+  assert.deepEqual(observed.map(o => o.model), ['mimo-v2.6-pro', 'mimo-v2.6-flash', 'mimo-v2.6-flash'])
+  assert.deepEqual(observed.map(o => o.reasoningEffort), ['high', null, null])
+  for (const call of observed) {
+    assert.deepEqual(call.outputSchema, HANDOFF_SCHEMAS[call.role])
+    assert.ok(call.prompt.includes(BASE.task), 'every prompt carries the task')
+  }
+  assert.ok(observed[1].prompt.includes(PLAN.testPlan), 'builder prompt carries the test plan')
+  assert.ok(observed[2].prompt.includes(BUILD.summary), 'verifier prompt carries the builder claim')
+  assert.deepEqual(locks.snapshot(), {}, 'all locks released after a clean run')
+})
+
+test('a missing planner handoff aborts before the builder and releases locks', async () => {
+  const locks = new LockRegistry()
+  const observed = []
+  const report = await runRelay({
+    ...BASE,
+    locks,
+    spawn: fakeSpawn({ planner: { structured: undefined } }, { locks, observed }),
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'plan')
+  assert.match(report.reason, /no structured handoff/)
+  assert.equal(observed.length, 1, 'builder never runs')
+  assert.deepEqual(locks.snapshot(), {})
+})
+
+test('an invalid planner testPlan fails the contract check', async () => {
+  const locks = new LockRegistry()
+  const report = await runRelay({
+    ...BASE,
+    locks,
+    spawn: fakeSpawn({ planner: { structured: { files: ['a.js'], testPlan: '   ' } } }, { locks }),
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'plan')
+  assert.match(report.reason, /testPlan/)
+  assert.deepEqual(locks.snapshot(), {})
+})
+
+test('a builder failure stops the relay before verification', async () => {
+  const locks = new LockRegistry()
+  const observed = []
+  const report = await runRelay({
+    ...BASE,
+    locks,
+    spawn: fakeSpawn(
+      { planner: { structured: PLAN }, builder: { structured: { status: 'fail', summary: 'lint still red' } } },
+      { locks, observed },
+    ),
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'build')
+  assert.match(report.reason, /lint still red/)
+  assert.equal(observed.length, 2, 'verifier never runs')
+  assert.deepEqual(locks.snapshot(), {})
+})
+
+test('verifier defects fail the relay and are reported', async () => {
+  const locks = new LockRegistry()
+  const report = await runRelay({
+    ...BASE,
+    locks,
+    spawn: fakeSpawn(
+      { planner: { structured: PLAN }, builder: { structured: BUILD }, verifier: { structured: { defects: ['src/greet.js: ignores empty input', 'test/greet.test.js: missing case'], summary: 'not clean' } } },
+      { locks },
+    ),
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'verify')
+  assert.match(report.reason, /2 defect/)
+  assert.equal(report.verify.defects.length, 2)
+  assert.deepEqual(locks.snapshot(), {})
+})
+
+test('a non-completed stopReason surfaces the diagnostic', async () => {
+  const locks = new LockRegistry()
+  const report = await runRelay({
+    ...BASE,
+    locks,
+    spawn: fakeSpawn({ planner: { stopReason: 'error', diagnostic: 'model unreachable' } }, { locks }),
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'plan')
+  assert.match(report.reason, /stopReason=error/)
+  assert.match(report.reason, /model unreachable/)
+  assert.deepEqual(locks.snapshot(), {})
+})
+
+test('a throwing spawn becomes a report and still releases locks', async () => {
+  const locks = new LockRegistry()
+  const report = await runRelay({
+    ...BASE,
+    locks,
+    spawn: fakeSpawn({ planner: new Error('backend exploded') }, { locks }),
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'plan', 'the failing phase is named, not a generic error')
+  assert.match(report.reason, /backend exploded/)
+  assert.deepEqual(locks.snapshot(), {})
+})
+
+test('an aborted signal stops the relay before any spawn', async () => {
+  const locks = new LockRegistry()
+  const controller = new AbortController()
+  controller.abort()
+  const observed = []
+  const report = await runRelay({
+    ...BASE,
+    locks,
+    signal: controller.signal,
+    spawn: fakeSpawn(happyScript, { locks, observed }),
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'error')
+  assert.match(report.reason, /aborted/)
+  assert.equal(observed.length, 0)
+  assert.deepEqual(locks.snapshot(), {})
+})
+
+test('a hung phase times out at phaseTimeoutMs, fails the report, and releases locks', async () => {
+  const locks = new LockRegistry()
+  const spawn = () => new Promise(() => {}) // never settles
+  const report = await runRelay({ ...BASE, locks, spawn, phaseTimeoutMs: 50 })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'plan')
+  assert.match(report.reason, /timed out after 50ms/)
+  assert.deepEqual(locks.snapshot(), {}, 'the reader lock is released on timeout')
+})
+
+test('concurrent relays never overlap the same connector', async () => {
+  const locks = new LockRegistry()
+  const active = { plan: 0, build: 0, verify: 0 }
+  const max = { plan: 0, build: 0, verify: 0 }
+  const spawn = async ({ phase, role }) => {
+    active[phase]++
+    max[phase] = Math.max(max[phase], active[phase])
+    await new Promise(resolve => setTimeout(resolve, 5)) // yield so the rival relay reaches its acquire
+    active[phase]--
+    const scripted = { planner: PLAN, builder: BUILD, verifier: CLEAN }[role]
+    return { structured: scripted, stopReason: 'completed', output: [] }
+  }
+  const [a, b] = await Promise.all([
+    runRelay({ ...BASE, locks, spawn }),
+    runRelay({ ...BASE, locks, spawn }),
+  ])
+  assert.equal(a.ok, true)
+  assert.equal(b.ok, true)
+  // The guarantees: single-writer, single-browser, and readers serialize
+  // with each other (reader vs writer overlap across relays is allowed —
+  // cross-relay snapshot isolation is deferred beyond v0.5).
+  assert.equal(max.build, 1, 'two builds never run concurrently')
+  assert.equal(max.verify, 1, 'two verifies never run concurrently')
+  assert.equal(max.plan, 1, 'reader lock serializes planners')
+  assert.deepEqual(locks.snapshot(), {})
+})
+
+test('phase and role mappings and prompt contracts', () => {
+  assert.deepEqual(PHASES, ['plan', 'build', 'verify'])
+  assert.equal(lockForPhase('plan', 'ws'), 'reader:ws')
+  assert.equal(lockForPhase('build', 'ws'), 'writer:ws')
+  assert.equal(lockForPhase('verify', 'ws'), 'browser:ws')
+  assert.throws(() => lockForPhase('nope', 'ws'), RangeError)
+  assert.equal(roleForPhase('plan'), 'planner')
+  assert.equal(roleForPhase('build'), 'builder')
+  assert.equal(roleForPhase('verify'), 'verifier')
+  assert.throws(() => roleForPhase('nope'), RangeError)
+
+  assert.ok(plannerPrompt('the task').includes('READ-ONLY'))
+  assert.ok(builderPrompt('the task', PLAN).includes(PLAN.testPlan))
+  assert.ok(verifierPrompt('the task', PLAN, BUILD).includes(BUILD.summary))
+  assert.ok(verifierPrompt('the task', PLAN, BUILD).includes('never patch'))
+  // prompts must drive the structured_output capture tool, not JSON-as-text,
+  // and must forbid the delegate-and-wait pattern that ends a turn uncaptured
+  for (const prompt of [plannerPrompt('t'), builderPrompt('t', PLAN), verifierPrompt('t', PLAN, BUILD)]) {
+    assert.ok(prompt.includes('structured_output'), 'each prompt names the capture tool')
+    assert.ok(prompt.includes('EXACTLY ONCE'), 'each prompt demands a single capture call')
+    assert.ok(prompt.includes('never call mimo_relay'), 'each prompt forbids relay recursion')
+  }
+})
+
+test('validateHandoff rejects malformed contracts', () => {
+  assert.equal(validateHandoff('planner', undefined).ok, false)
+  assert.equal(validateHandoff('planner', { files: 'nope', testPlan: 'x' }).ok, false)
+  assert.equal(validateHandoff('planner', { files: [1], testPlan: 'x' }).ok, false)
+  assert.equal(validateHandoff('planner', { files: [], testPlan: 'npm test' }).ok, true, 'an empty file list is a valid plan')
+  assert.equal(validateHandoff('builder', { status: 'maybe', summary: 'x' }).ok, false)
+  assert.equal(validateHandoff('builder', { status: 'pass', summary: '' }).ok, false)
+  assert.equal(validateHandoff('verifier', { defects: 'none', summary: 'x' }).ok, false)
+  assert.equal(validateHandoff('verifier', { defects: [], summary: 'clean' }).ok, true)
+  assert.equal(validateHandoff('unknown', {}).ok, false)
+})

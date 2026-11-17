@@ -1,0 +1,182 @@
+# mimo-agent-pipeline v0.5 — dsh-plugin-mimo-relay bundle patch.
+# Top-level YAML array (there is NO `plugins:` key). Plain values and
+# environment-variable names only; !!js expressions are evaluated by the
+# Loader against each child plugin's context.
+- insert:
+    - id: mimo-relay
+      name: dsh-plugin-mimo-relay
+      config:
+        plannerModel: mimo-v2.6-pro
+        workerModel: mimo-v2.6-flash
+        plannerReasoningEffort: high
+        workerReasoningEffort: null
+        timeoutMs: 1920000
+        phaseTimeoutMs: 600000
+
+    # --- role packs (connector-scoped presets) -------------------------
+    # Verified connectors only: context7 @upstash/context7-mcp 4.7.3,
+    # postgres @modelcontextprotocol/server-postgres 0.6.2.
+    # @modelcontextprotocol/server-sqlite does NOT exist — never referenced.
+
+    - id: preset-planner
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: planner
+        name: Planner
+        description: Read-only planning on Pro — file list + test plan handoff, github/memory/context7 connectors.
+        order: 31
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >-
+                You are the PLANNER of a three-role relay (planner -> builder ->
+                verifier). You are strictly read-only: never edit files and never
+                run write commands. Decide which files must change and how the
+                work will be verified, then hand off.
+          - id: mcp-github
+            name: '@deepseek-ai/dsh-mcp-client'
+            config:
+              serverName: github
+              transport: stdio
+              command: npx
+              args: ['-y', '@modelcontextprotocol/server-github']
+              env:
+                GITHUB_TOKEN: !!js process.env.GITHUB_TOKEN || ''
+          - id: mcp-memory
+            name: '@deepseek-ai/dsh-mcp-client'
+            config:
+              serverName: memory
+              transport: stdio
+              command: mcp-server-memory
+              env:
+                MEMORY_FILE_PATH: !!js dshHomePath('memory.jsonl')
+          - id: mcp-context7
+            name: '@deepseek-ai/dsh-mcp-client'
+            config:
+              serverName: context7
+              transport: stdio
+              command: npx
+              args: ['-y', '@upstash/context7-mcp']
+          # Presets declare their tools: without these the child has no
+          # filesystem world at all (verified live — 85 tools, zero shell).
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              write: false
+              edit: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+
+    - id: preset-scout
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: scout
+        name: Scout
+        description: Read-only parallel discovery — repo, database (postgres), and docs (context7).
+        order: 32
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >-
+                You are a SCOUT: read-only discovery across the repository, the
+                database (when a postgres connector is configured), and external
+                docs (context7). Report findings compactly. Never modify anything.
+          - id: mcp-context7
+            name: '@deepseek-ai/dsh-mcp-client'
+            config:
+              serverName: context7
+              transport: stdio
+              command: npx
+              args: ['-y', '@upstash/context7-mcp']
+          - id: mcp-postgres
+            name: '@deepseek-ai/dsh-mcp-client'
+            config:
+              serverName: postgres
+              transport: stdio
+              command: npx
+              args: ['-y', '@modelcontextprotocol/server-postgres']
+              env:
+                DATABASE_URL: !!js process.env.DATABASE_URL || ''
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              write: false
+              edit: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+
+    - id: preset-builder
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: builder
+        name: Builder
+        description: Single-writer implementation on Flash — writes and shells, no MCP connectors, exits only on test/lint exit 0.
+        order: 33
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >-
+                You are the BUILDER of a three-role relay (planner -> builder ->
+                verifier). Implement exactly what the planner's handoff calls
+                for, run its testPlan until every command exits 0, and never
+                weaken or delete a test to pass. You hold the single-writer lock.
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              write: true
+              edit: true
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+
+    - id: preset-verifier
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: verifier
+        name: Verifier
+        description: Read-only verification on Flash — runs the test plan under the single-browser lock, reports defects, never patches.
+        order: 34
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >-
+                You are the VERIFIER of a three-role relay (planner -> builder ->
+                verifier). You are strictly read-only: run the planner's testPlan,
+                inspect the changes against the task, report every defect, and
+                never patch anything yourself. You hold the single-browser lock.
+          - id: mcp-playwright
+            name: '@deepseek-ai/dsh-mcp-client'
+            config:
+              serverName: playwright
+              transport: stdio
+              command: npx
+              args: ['-y', '@playwright/mcp@latest']
+          # The verifier must RUN the testPlan itself: shell yes, writes no.
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              write: false
+              edit: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false

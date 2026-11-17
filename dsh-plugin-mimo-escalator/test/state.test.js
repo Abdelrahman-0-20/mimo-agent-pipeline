@@ -86,6 +86,17 @@ test('rejects invalid options', () => {
   assert.throws(() => new EscalationState({ demoteThreshold: -1 }), RangeError)
 })
 
+test('state keys namespace by workspace basename and role (v0.5)', async () => {
+  const { stateKeyFor } = await import('../src/index.js')
+  assert.equal(stateKeyFor('/home/u/repo', 'builder'), 'repo:builder')
+  assert.equal(stateKeyFor('/home/u/repo/', 'planner'), 'repo:planner')
+  assert.equal(stateKeyFor('/home/u/other-repo', 'main'), 'other-repo:main')
+  assert.equal(stateKeyFor(undefined, 'builder'), 'workspace:builder')
+  assert.equal(stateKeyFor('', 'verifier'), 'workspace:verifier')
+  // different roles in one workspace never share a key
+  assert.notEqual(stateKeyFor('/repo', 'builder'), stateKeyFor('/repo', 'planner'))
+})
+
 test('hydrates from a persisted snapshot and continues the cycle', () => {
   const state = new EscalationState({ initial: { strikes: 1, passes: 0, escalated: false } })
   assert.equal(state.strikes, 1)

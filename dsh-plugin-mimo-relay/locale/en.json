@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "MiMo relay",
+    "description": "Runs the three-role Planner→Builder→Verifier relay: role-scoped connector packs, per-workspace writer/browser locks, and a schema-checked handoff contract."
+  }
+}

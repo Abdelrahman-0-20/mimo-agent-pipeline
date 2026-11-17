@@ -23,6 +23,7 @@ check "serverName: memory"    "MCP memory server"
 check "serverName: github"    "MCP github server"
 check "serverName: playwright" "MCP playwright server"
 check "mimo-escalator"         "MiMo auto-escalation plugin (Flash->Pro, 2 strikes)"
+check "mimo-relay"             "Multi-agent relay (Planner->Builder->Verifier)"
 
 echo "----"
 echo "$pass passed, $failed failed"

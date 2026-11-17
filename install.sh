@@ -23,6 +23,9 @@ log "Installing plugins into profile '$PROFILE'"
 log "Installing local escalator bundle (dsh-plugin-mimo-escalator)"
 "$DSH_BIN" plugin --profile "$PROFILE" add "$SCRIPT_DIR/dsh-plugin-mimo-escalator"
 
+log "Installing local relay bundle (dsh-plugin-mimo-relay)"
+"$DSH_BIN" plugin --profile "$PROFILE" add "$SCRIPT_DIR/dsh-plugin-mimo-relay"
+
 log "Installing pinned memory MCP server (@modelcontextprotocol/server-memory@2026.7.4)"
 npm install -g @modelcontextprotocol/server-memory@2026.7.4
 

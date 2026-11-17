@@ -34,10 +34,24 @@ test('a corrupt or wrong-shaped file loads as an empty store', () => {
   const path = join(dir, 'state.json')
   writeFileSync(path, '{not json at all')
   assert.deepEqual(loadStore(path).sessions, {})
-  writeFileSync(path, JSON.stringify({ version: 1, sessions: 'nope' }))
+  writeFileSync(path, JSON.stringify({ version: STORE_VERSION, sessions: 'nope' }))
   assert.deepEqual(loadStore(path).sessions, {})
-  writeFileSync(path, JSON.stringify({ version: 1, sessions: { bad: { strikes: 'x' } } }))
+  writeFileSync(path, JSON.stringify({ version: STORE_VERSION, sessions: { bad: { strikes: 'x' } } }))
   assert.deepEqual(loadStore(path).sessions, {})
+  rmSync(dir, { recursive: true })
+})
+
+test('a store from an older version loads as empty (role keys replace session keys)', () => {
+  const dir = tempDir()
+  const path = join(dir, 'state.json')
+  const legacy = {
+    version: 1,
+    sessions: {
+      'session-abc': { strikes: 1, passes: 0, escalated: false, original: null, rounds: { pass: 0, fail: 1 } },
+    },
+  }
+  writeFileSync(path, JSON.stringify(legacy))
+  assert.deepEqual(loadStore(path).sessions, {}, 'v1 session-id keys are not valid role keys')
   rmSync(dir, { recursive: true })
 })
 
