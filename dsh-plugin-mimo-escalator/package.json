@@ -25,7 +25,7 @@
   ],
   "icon": "./icon.svg",
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test test/*.test.js"
   },
   "engines": {
     "node": ">=22"
