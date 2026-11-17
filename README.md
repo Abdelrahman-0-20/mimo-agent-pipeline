@@ -2,7 +2,7 @@
 
 > An end-to-end **autonomous engineering pipeline** for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — dual-model **Xiaomi MiMo** routing, persistent MCP memory, independent code review, and deterministic verification gates.
 
-![version](https://img.shields.io/badge/version-v0.1.0-blue) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-v0.2.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![CI](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/actions/workflows/ci.yml/badge.svg)
 
 ## What this is
 
@@ -92,12 +92,21 @@ PASS  MCP playwright server
 7 passed, 0 failed
 ```
 
+## Continuous integration
+
+Every push runs two jobs — and the pipeline job is an honest test: it reproduces the setup on a **clean Ubuntu runner** (install DSH → `install.sh` → merge config → `verify.sh`) and fails the build unless every component mounts.
+
+```text
+lint · yaml · secret-scan ............... PASS   shell syntax, YAML structure, no keys committed
+pipeline · fresh-machine reproducibility  PASS   DSH + 3 plugins + MCP config → verify.sh exit 0
+```
+
 ## Roadmap
 
 | Version | Ships | Status |
 |---|---|---|
 | **v0.1** | Config kit + install/verify scripts + gates | ✅ current |
-| **v0.2** | CI running `verify.sh` + demo GIF (cross-session memory) | ⬜ |
+| **v0.2** | CI: fresh-machine reproducibility gate + secret scan + badge | ✅ current |
 | **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed test rounds (original code) | ⬜ |
 | **v0.4** | Flash-vs-Pro cost/quality benchmark on identical tasks | ⬜ |
 | **v1.0** | Case study: pipeline builds a full MLOps project end-to-end | ⬜ |

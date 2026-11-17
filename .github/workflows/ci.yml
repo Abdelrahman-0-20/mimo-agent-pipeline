@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: lint · yaml · secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell script syntax
+        run: bash -n install.sh && bash -n verify.sh && echo "shell OK"
+
+      - name: YAML structure (config templates)
+        run: |
+          npx -y js-yaml@5.5.0 <(sed 's/!!js //g' config/cordis.patch.yml.example) > /dev/null && echo "cordis template OK"
+          npx -y js-yaml@5.5.0 config/settings.yaml.example > /dev/null && echo "settings template OK"
+
+      - name: Secret scan
+        run: |
+          if git grep -nE '(ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|xox[baprs]-)' -- .; then
+            echo "::error::Possible secret committed"
+            exit 1
+          fi
+          echo "no secrets found"
+
+  pipeline:
+    name: fresh-machine reproducibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install DeepSeek Harness and pnpm
+        run: |
+          npm install -g pnpm@11 @deepseek-ai/dsh@0.2.2-rc.1
+          dsh --version
+
+      - name: Install pipeline components
+        run: ./install.sh
+
+      - name: Merge pipeline config into profile
+        run: cp config/cordis.patch.yml.example "$HOME/.dsh/profiles/web/cordis.patch.yml"
+
+      - name: Verification gate - must exit 0
+        run: ./verify.sh
