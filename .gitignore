@@ -10,6 +10,10 @@ credentials.yaml
 memory.jsonl
 node_modules/
 
+# escalator runtime state
+mimo-escalator-state.json
+*.tmp
+
 # noise
 .DS_Store
 *.log

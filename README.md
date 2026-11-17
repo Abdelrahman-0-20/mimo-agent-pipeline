@@ -101,14 +101,30 @@ lint · yaml · secret-scan ............... PASS   shell syntax, YAML structure,
 pipeline · fresh-machine reproducibility  PASS   DSH + 3 plugins + MCP config → verify.sh exit 0
 ```
 
+## Build plan — v0.3 `dsh-plugin-mimo-escalator`
+
+Full spec: **[issue #1](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/issues/1)** — a fresh Creator Mode session starts there. Summary:
+
+1. **Inspect first, paste nothing.** Derive every API from the DSH checkout: tool-result hook (`packages/core/tools`), model/reasoning switch surface (`packages/llm/llm-pi-ai` — per-model `reasoningEfforts`, no `extraBody`), and the manifest shape of an installed `@michengai/dsh-*` plugin.
+2. **MVP before extras:** `src/state.js` (2-strike + hysteresis) · `src/index.js` (Cordis wiring) · `cordis.patch.yml` + `package.json` (top-level-array patch, `manifestVersion: 1`) · `test/state.test.js` (`node --test`, exit 0).
+3. **Wire into this repo:** `verify.sh` check #8, an `npm test` CI job, README benchmark only with labeled/sourced numbers.
+4. **Deferred (v0.4+):** MCP-aware read-only detection, metrics, standalone stdio MCP server, persistence/TTL, multi-agent relay.
+
+### Multi-agent relay design notes (v0.5)
+
+- **Per-role escalator keys** — `<workspace>:<role>` (e.g. `repo:builder`) so a builder's 2-strike failure never escalates the planner.
+- **Sequential relay** — Planner (Pro, read-only) → Builder (Flash, workspace-write lock) → Verifier (Flash, browser/dev-server lock); only read-only discovery runs in parallel.
+- **Handoff contract** — planner emits file list + test plan; verifier reports defects, never patches; builder exits only on test/lint exit `0`.
+
 ## Roadmap
 
 | Version | Ships | Status |
 |---|---|---|
-| **v0.1** | Config kit + install/verify scripts + gates | ✅ current |
-| **v0.2** | CI: fresh-machine reproducibility gate + secret scan + badge | ✅ current |
-| **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed test rounds (original code) | ⬜ |
-| **v0.4** | Flash-vs-Pro cost/quality benchmark on identical tasks | ⬜ |
+| **v0.1** | Config kit + install/verify scripts + gates | ✅ |
+| **v0.2** | CI: fresh-machine reproducibility gate + secret scan + badge | ✅ |
+| **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed test rounds · spec in issue #1 | ⬜ next |
+| **v0.4** | Metrics + benchmark (labeled synthetic or real usage) · MCP-aware read-only detection | ⬜ |
+| **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role `<workspace>:<role>` escalator keys, sequential connector locks | ⬜ |
 | **v1.0** | Case study: pipeline builds a full MLOps project end-to-end | ⬜ |
 
 ## Security
