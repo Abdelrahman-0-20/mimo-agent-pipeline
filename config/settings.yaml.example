@@ -1,0 +1,18 @@
+# mimo-agent-pipeline — alternative layer for $DSH_HOME/settings.yaml
+# (same routing as config/cordis.patch.yml.example; DSH's live patch layer
+#  is cordis.patch.yml — use whichever layer your install reads)
+
+llm-pi-ai:
+  providers:
+    xiaomi-mimo:
+      apiKeyEnv: MIMO_API_KEY
+      api: openai-completions
+      baseURL: https://api.xiaomimimo.com/v1
+      models:
+        - id: mimo-v2.6-pro
+        - id: mimo-v2.6-flash
+
+# Cheap default: Flash; switch the session to Pro for hard tasks
+agent-default-model:
+  provider: xiaomi-token-plan-sgp
+  model: mimo-v2.6-flash

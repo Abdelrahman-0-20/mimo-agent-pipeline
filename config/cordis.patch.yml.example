@@ -1,0 +1,66 @@
+# mimo-agent-pipeline — DSH profile patch template (SANITIZED)
+# Merge into: $DSH_HOME/profiles/<profile>/cordis.patch.yml
+# RULE: only environment-variable NAMES live here, never real keys.
+
+# --- §1: dual-model routing (cheap default + escalation) -------------
+- id: llm-pi-ai
+  name: "@deepseek-ai/dsh-llm-pi-ai"
+  config:
+    providers:
+      # Route A — token-plan endpoint (works with an existing token-plan key)
+      xiaomi-token-plan-sgp:
+        apiKeyEnv: XIAOMI_TOKEN_PLAN_SGP_API_KEY
+      # Route B — direct MiMo OpenAI-compatible endpoint
+      xiaomi-mimo:
+        apiKeyEnv: MIMO_API_KEY
+        api: openai-completions
+        baseURL: https://api.xiaomimimo.com/v1
+        defaultInput: [ text, image ]
+        models:
+          - id: mimo-v2.6-pro
+            reasoningEfforts:
+              off: null
+              low: low
+              medium: medium
+              high: high
+          - id: mimo-v2.6-flash
+            reasoningEfforts:
+              off: null
+              low: low
+              medium: medium
+              high: high
+
+# Cheap default: Flash for subagents and routine edits
+- id: agent-default-model
+  name: "@deepseek-ai/dsh-agent-default-model"
+  config:
+    provider: xiaomi-token-plan-sgp
+    model: mimo-v2.6-flash
+
+# --- §3: MCP servers (one instance = one server) ---------------------
+- insert:
+    - id: mcp-memory
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: memory
+        transport: stdio
+        command: mcp-server-memory
+        env:
+          # replace with YOUR absolute path
+          MEMORY_FILE_PATH: /YOUR/HOME/.dsh/memory.jsonl
+    - id: mcp-github
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: github
+        transport: stdio
+        command: npx
+        args: [ '-y', '@modelcontextprotocol/server-github' ]
+        env:
+          GITHUB_TOKEN: !!js process.env.GITHUB_TOKEN || ''
+    - id: mcp-playwright
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: playwright
+        transport: stdio
+        command: npx
+        args: [ '-y', '@playwright/mcp@latest' ]
