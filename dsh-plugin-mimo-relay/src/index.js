@@ -21,6 +21,14 @@
 import { LockRegistry } from './locks.js'
 import { runRelay } from './relay.js'
 
+/**
+ * Activate only after the tools service exists. Without this edge, a cold
+ * boot can start this fiber in parallel with dsh-base's `tools` row: apply()
+ * then sees `ctx.get('tools') === undefined`, early-returns, and the fiber
+ * reports `active` with no tool registered (observed after a host restart).
+ */
+export const inject = ['tools']
+
 /** Plugin defaults; the Config schema fills every omitted field with these. */
 const DEFAULTS = {
   provider: undefined,
@@ -211,8 +219,6 @@ export function apply(ctx, config) {
     console.warn('[mimo-relay] tools service unavailable; mimo_relay not registered')
     return
   }
-  const subagents = ctx.get('subagents')
-  const workingDirectory = ctx.get('workingDirectory')
   const locks = new LockRegistry()
   /** One relay at a time per process — this also stops recursive mimo_relay calls from children. */
   let activeRelay = false
@@ -228,12 +234,12 @@ export function apply(ctx, config) {
   // awaited, before the first prompt — so the slim schema applies from
   // step one. Fail-open: a name unknown on this DSH build logs a warning
   // and leaves the child unsliced rather than breaking agent creation.
-  const agentPresets = ctx.get('agentPresets')
   const RELAY_ROLES = new Set(['planner', 'scout', 'builder', 'verifier'])
   ctx.on('agent/created', async ({ agent }) => {
     try {
       if (config.toolScoping !== true) return
-      const preset = agentPresets === undefined ? undefined : agentPresets.presetForSession(agent.session)
+      const presets = ctx.get('agentPresets')
+      const preset = presets === undefined ? undefined : presets.presetForSession(agent.session)
       if (preset === undefined || preset === null || !RELAY_ROLES.has(preset)) return
       const agentTools = agent.ctx.get('tools')
       if (agentTools === undefined) return
@@ -273,8 +279,12 @@ export function apply(ctx, config) {
       const fail = (phase, reason, report = {}) => ({ ok: false, phase, reason, report: { ...report, locks: locks.snapshot() } })
       const parent = exec.agent
       if (parent === undefined || parent === null) return fail('setup', 'no calling agent')
+      // Resolved at call time, never captured at apply: a cold-boot fiber can
+      // start before these providers exist (the inject edge only orders tools).
+      const subagents = ctx.get('subagents')
       if (subagents === undefined) return fail('setup', 'subagents service unavailable (spawn backend not mounted)')
       if (activeRelay) return fail('busy', 'another relay is already running in this process; retry when it finishes')
+      const workingDirectory = ctx.get('workingDirectory')
 
       let workspace
       try {

@@ -10,8 +10,8 @@
         workerModel: mimo-v2.6-flash
         plannerReasoningEffort: high
         workerReasoningEffort: null
-        timeoutMs: 1920000
-        phaseTimeoutMs: 600000
+        timeoutMs: 3600000
+        phaseTimeoutMs: 1200000
         # v0.6: hide irrelevant global tool schemas from relay children
         toolScoping: true
 

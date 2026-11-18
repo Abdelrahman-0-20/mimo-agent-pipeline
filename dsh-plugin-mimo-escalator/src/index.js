@@ -37,6 +37,13 @@ import { EscalationState } from './state.js'
 import { EffortPolicy } from './effort.js'
 import { applySnapshot, countRound, entryFor, loadStore, recordEffortToggle, recordTransition, saveStore } from './store.js'
 
+/**
+ * Activate only after the tools service exists. Without this edge, a cold
+ * boot can start this fiber in parallel with dsh-base's `tools` row and the
+ * status tool silently fails to register while the fiber reports `active`.
+ */
+export const inject = ['tools']
+
 /** Leading shell noise stripped before matching: assignments, env/command/time, npx flags. */
 const LEADING_WRAPPERS = /^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+|env\s+|command\s+|time\s+|npx\s+(?:--?[A-Za-z][\w-]*\s+)*)+/
 
@@ -375,10 +382,11 @@ export function apply(ctx, config) {
     discoverySteps: config.discoverySteps,
     minToggleGapMs: config.minToggleGapMs,
   })
-  const tokenMeter = ctx.get('tokenMeter')
 
   /** tokenMeter snapshot for one toggle — the "measure before trusting" sample. */
   const effortSample = (agent) => {
+    // Resolved per call, never captured at apply (cold-boot provider race).
+    const tokenMeter = ctx.get('tokenMeter')
     if (tokenMeter === undefined) return null
     try {
       const measured = tokenMeter.measure(agent.session)
