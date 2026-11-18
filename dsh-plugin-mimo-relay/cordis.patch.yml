@@ -12,6 +12,7 @@
         workerReasoningEffort: null
         timeoutMs: 3600000
         phaseTimeoutMs: 1800000
+        phaseRetries: 1
         # v0.6: hide irrelevant global tool schemas from relay children
         toolScoping: true
 

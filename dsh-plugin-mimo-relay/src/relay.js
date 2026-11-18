@@ -145,6 +145,44 @@ export function verifierPrompt(task, plan, build) {
 }
 
 /**
+ * Append the recovery directive to a failed phase's prompt. One retry per
+ * phase covers both failure classes we actually observed: a malformed
+ * handoff (e.g. empty status) and an infra death (quota/timeout) — the
+ * retrying child inspects existing work first instead of starting over.
+ * @param {string} prompt - the original phase prompt.
+ * @param {string} reason - why the previous attempt failed.
+ * @returns {string}
+ */
+export function recoveryPrompt(prompt, reason) {
+  return [
+    prompt,
+    '',
+    '[relay recovery] A previous attempt at this phase failed:',
+    reason,
+    'Inspect any existing work first — if it already satisfies the task, produce the handoff directly; otherwise finish it. '
+      + 'Your structured_output status must be exactly "pass" or "fail" (never empty), and this run must complete the phase.',
+  ].join('\n')
+}
+
+/** Abortable delay (a quota cool-off must not outlive the relay). */
+const delay = (ms, signal) => new Promise((resolve, reject) => {
+  if (signal?.aborted === true) {
+    reject(signal.reason ?? new Error('aborted'))
+    return
+  }
+  let timer
+  const onAbort = () => {
+    clearTimeout(timer)
+    reject(signal.reason ?? new Error('aborted'))
+  }
+  timer = setTimeout(() => {
+    signal?.removeEventListener('abort', onAbort)
+    resolve()
+  }, ms)
+  signal?.addEventListener('abort', onAbort, { once: true })
+})
+
+/**
  * Run one relay end to end.
  * @param {{
  *   task: string,
@@ -155,8 +193,11 @@ export function verifierPrompt(task, plan, build) {
  *   workerModel: string,
  *   plannerReasoningEffort?: string | null,
  *   workerReasoningEffort?: string | null,
+ *   phaseTimeoutMs?: number,
+ *   phaseRetries?: number,
  *   provider?: string,
  *   signal?: AbortSignal,
+ *   sleep?(ms: number, signal?: AbortSignal): Promise<void>,
  *   log?(message: string): void,
  * }} input
  * @returns {Promise<object>} the relay report ({ok:false, phase, reason} on any failure; locks always released).
@@ -167,60 +208,82 @@ export async function runRelay(input) {
     plannerModel, workerModel,
     plannerReasoningEffort = null, workerReasoningEffort = null,
     phaseTimeoutMs = 600_000,
-    signal, log = () => {},
+    phaseRetries = 1,
+    signal, sleep = delay, log = () => {},
   } = input
   const held = []
 
-  const runPhase = async (phase, prompt, model, reasoningEffort) => {
+  const runPhase = async (phase, initialPrompt, model, reasoningEffort) => {
     const lock = lockForPhase(phase, workspace)
     const role = roleForPhase(phase)
     const release = await locks.acquire(lock, role, signal)
     held.push(lock)
     log(`${phase}: acquired ${lock} (${role})`)
-    // Each phase gets its own bounded signal: a hung child can never hold the
-    // connector (or the relay) past phaseTimeoutMs.
-    const phaseController = new AbortController()
-    const onOuterAbort = () => phaseController.abort(signal.reason ?? new Error('relay aborted'))
-    if (signal !== undefined) {
-      if (signal.aborted) onOuterAbort()
-      else signal.addEventListener('abort', onOuterAbort, { once: true })
-    }
-    const timer = setTimeout(
-      () => phaseController.abort(new Error(`phase ${phase} timed out after ${phaseTimeoutMs}ms`)),
-      phaseTimeoutMs,
-    )
     try {
-      const spawned = spawn({
-        phase, role, prompt, model, reasoningEffort,
-        outputSchema: HANDOFF_SCHEMAS[role],
-        signal: phaseController.signal,
-      })
-      // The relay owns the phase deadline: race the spawn against the phase
-      // signal so even a spawn implementation that ignores signals cannot
-      // hold the phase (or its lock) past phaseTimeoutMs.
-      const result = await new Promise((resolve, reject) => {
-        const onAbort = () => reject(phaseController.signal.reason ?? new Error('aborted'))
-        if (phaseController.signal.aborted) {
-          onAbort()
-          return
+      let prompt = initialPrompt
+      let lastFailure
+      for (let attempt = 0; attempt <= phaseRetries; attempt++) {
+        if (attempt > 0) {
+          log(`${phase}: retry ${attempt}/${phaseRetries} after: ${lastFailure.reason.slice(0, 140)}`)
+          if (/429|quota/i.test(lastFailure.reason)) {
+            log(`${phase}: quota cool-off 60s`)
+            await sleep(60_000, signal)
+          }
+          prompt = recoveryPrompt(prompt, lastFailure.reason)
         }
-        phaseController.signal.addEventListener('abort', onAbort, { once: true })
-        spawned.then(
-          (value) => { phaseController.signal.removeEventListener('abort', onAbort); resolve(value) },
-          (error) => { phaseController.signal.removeEventListener('abort', onAbort); reject(error) },
+        // Each attempt gets its own bounded signal and deadline: a hung child
+        // can never hold the connector past one phase budget.
+        const phaseController = new AbortController()
+        const onOuterAbort = () => phaseController.abort(signal.reason ?? new Error('relay aborted'))
+        if (signal !== undefined) {
+          if (signal.aborted) onOuterAbort()
+          else signal.addEventListener('abort', onOuterAbort, { once: true })
+        }
+        const timer = setTimeout(
+          () => phaseController.abort(new Error(`phase ${phase} timed out after ${phaseTimeoutMs}ms`)),
+          phaseTimeoutMs,
         )
-      })
-      if (result.stopReason !== 'completed') {
-        return { failed: { ok: false, phase, reason: `${role} ended with stopReason=${result.stopReason}${result.diagnostic ? `: ${result.diagnostic}` : ''}` } }
+        try {
+          const spawned = spawn({
+            phase, role, prompt, model, reasoningEffort,
+            outputSchema: HANDOFF_SCHEMAS[role],
+            signal: phaseController.signal,
+          })
+          // The relay owns the deadline: race the spawn against the phase
+          // signal so even a spawn that ignores signals cannot overrun it.
+          const result = await new Promise((resolve, reject) => {
+            const onAbort = () => reject(phaseController.signal.reason ?? new Error('aborted'))
+            if (phaseController.signal.aborted) {
+              onAbort()
+              return
+            }
+            phaseController.signal.addEventListener('abort', onAbort, { once: true })
+            spawned.then(
+              (value) => { phaseController.signal.removeEventListener('abort', onAbort); resolve(value) },
+              (error) => { phaseController.signal.removeEventListener('abort', onAbort); reject(error) },
+            )
+          })
+          if (result.stopReason !== 'completed') {
+            lastFailure = { ok: false, phase, reason: `${role} ended with stopReason=${result.stopReason}${result.diagnostic ? `: ${result.diagnostic}` : ''}` }
+            continue
+          }
+          const check = validateHandoff(role, result.structured)
+          if (!check.ok) {
+            lastFailure = { ok: false, phase, reason: check.reason }
+            continue
+          }
+          if (attempt > 0) log(`${phase}: recovered on retry ${attempt}`)
+          return { value: check.value }
+        } catch (error) {
+          lastFailure = { ok: false, phase, reason: error?.message ?? String(error) }
+          continue
+        } finally {
+          clearTimeout(timer)
+          if (signal !== undefined) signal.removeEventListener('abort', onOuterAbort)
+        }
       }
-      const check = validateHandoff(role, result.structured)
-      if (!check.ok) return { failed: { ok: false, phase, reason: check.reason } }
-      return { value: check.value }
-    } catch (error) {
-      return { failed: { ok: false, phase, reason: error?.message ?? String(error) } }
+      return { failed: { ...lastFailure, attempts: phaseRetries + 1 } }
     } finally {
-      clearTimeout(timer)
-      if (signal !== undefined) signal.removeEventListener('abort', onOuterAbort)
       await release()
       held.pop()
       log(`${phase}: released ${lock}`)

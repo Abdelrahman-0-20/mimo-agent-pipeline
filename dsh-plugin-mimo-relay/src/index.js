@@ -38,6 +38,7 @@ const DEFAULTS = {
   workerReasoningEffort: null,
   timeoutMs: 1_920_000,
   phaseTimeoutMs: 600_000,
+  phaseRetries: 1,
   // v0.6 token cut: hide irrelevant globals from relay children at
   // agent/created (deny lists in ROLE_TOOL_DENY / COMMON_TOOL_DENY).
   toolScoping: true,
@@ -113,6 +114,14 @@ export const Config = {
           issues.push(issue('phaseTimeoutMs', 'phaseTimeoutMs must be an integer between 30000 and 1800000'))
         } else {
           value.phaseTimeoutMs = input.phaseTimeoutMs
+        }
+      }
+
+      if (input.phaseRetries !== undefined) {
+        if (!Number.isInteger(input.phaseRetries) || input.phaseRetries < 0 || input.phaseRetries > 3) {
+          issues.push(issue('phaseRetries', 'phaseRetries must be an integer between0 and3'))
+        } else {
+          value.phaseRetries = input.phaseRetries
         }
       }
 
@@ -360,6 +369,7 @@ export function apply(ctx, config) {
           plannerReasoningEffort: config.plannerReasoningEffort,
           workerReasoningEffort: config.workerReasoningEffort,
           phaseTimeoutMs: config.phaseTimeoutMs,
+          phaseRetries: config.phaseRetries,
           signal: exec.signal,
           log: (message) => console.info(`[mimo-relay] ${message}`),
         })

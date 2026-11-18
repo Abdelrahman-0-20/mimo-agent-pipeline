@@ -21,6 +21,9 @@ const BASE = {
   workerModel: 'mimo-v2.6-flash',
   plannerReasoningEffort: 'high',
   workerReasoningEffort: null,
+  // Single-shot unless a retry test opts in: the recovery behavior is tested
+  // explicitly below so every legacy expectation stays exact.
+  phaseRetries: 0,
 }
 
 const PLAN = { files: ['src/greet.js', 'test/greet.test.js'], testPlan: 'npm test && npm run lint' }
@@ -32,6 +35,7 @@ const CLEAN = { defects: [], summary: 'all green' }
  * while running, records the call, and returns the scripted result.
  */
 function fakeSpawn(script, { locks, observed } = {}) {
+  const counts = {}
   return async ({ phase, role, prompt, model, reasoningEffort, outputSchema, signal }) => {
     observed?.push({ phase, role, prompt, model, reasoningEffort, outputSchema, signal })
     if (locks !== undefined) {
@@ -43,7 +47,11 @@ function fakeSpawn(script, { locks, observed } = {}) {
         )
       }
     }
-    const entry = script[role]
+    const sequence = script[role]
+    // An array scripts one entry per call (retry scenarios); a plain value repeats.
+    const entry = Array.isArray(sequence)
+      ? sequence[(counts[role] = (counts[role] ?? 0) + 1) - 1]
+      : sequence
     if (entry instanceof Error) throw entry
     if (entry !== undefined && entry.stopReason !== undefined && entry.stopReason !== 'completed') {
       return { structured: entry.structured, stopReason: entry.stopReason, diagnostic: entry.diagnostic, output: [] }
@@ -281,4 +289,74 @@ test('validateHandoff rejects malformed contracts', () => {
   assert.equal(validateHandoff('verifier', { defects: 'none', summary: 'x' }).ok, false)
   assert.equal(validateHandoff('verifier', { defects: [], summary: 'clean' }).ok, true)
   assert.equal(validateHandoff('unknown', {}).ok, false)
+})
+
+test('contract failure retries once with a recovery prompt and can recover', async () => {
+  const locks = new LockRegistry()
+  const observed = []
+  const report = await runRelay({
+    ...BASE,
+    phaseRetries: 1,
+    spawn: fakeSpawn({
+      planner: [{ stopReason: 'completed', structured: undefined }, { structured: PLAN }],
+      builder: { structured: BUILD },
+      verifier: { structured: CLEAN },
+    }, { locks, observed }),
+    locks,
+  })
+  assert.equal(report.ok, true)
+  const plannerCalls = observed.filter((e) => e.role === 'planner')
+  assert.equal(plannerCalls.length, 2)
+  assert.match(plannerCalls[1].prompt, /\[relay recovery\]/)
+  assert.match(plannerCalls[1].prompt, /status must be exactly "pass" or "fail"/)
+  assert.match(plannerCalls[1].prompt, /no structured handoff/)
+  assert.ok(plannerCalls[1].prompt.startsWith(plannerCalls[0].prompt), 'original prompt is preserved')
+})
+
+test('infra failure with a quota error cools off 60s before the retry', async () => {
+  const sleeps = []
+  const report = await runRelay({
+    ...BASE,
+    phaseRetries: 1,
+    spawn: fakeSpawn({
+      planner: [{ stopReason: 'error', diagnostic: '429: {"code":"429","message":"quota exhausted"}' }, { structured: PLAN }],
+      builder: { structured: BUILD },
+      verifier: { structured: CLEAN },
+    }),
+    locks: new LockRegistry(),
+    sleep: async (ms) => { sleeps.push(ms) },
+  })
+  assert.equal(report.ok, true)
+  assert.deepEqual(sleeps, [60_000])
+})
+
+test('exhausted retries return the last failure with an attempts count', async () => {
+  const observed = []
+  const report = await runRelay({
+    ...BASE,
+    phaseRetries: 1,
+    spawn: fakeSpawn({ planner: [undefined, undefined] }, { observed }),
+    locks: new LockRegistry(),
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'plan')
+  assert.match(report.reason, /no structured handoff/)
+  assert.equal(report.attempts, 2)
+  assert.equal(observed.length, 2)
+})
+
+test('a builder legitimately reporting fail is NOT retried', async () => {
+  const observed = []
+  const report = await runRelay({
+    ...BASE,
+    phaseRetries: 1,
+    spawn: fakeSpawn({
+      planner: { structured: PLAN },
+      builder: { structured: { status: 'fail', summary: 'real failure' } },
+    }, { observed }),
+    locks: new LockRegistry(),
+  })
+  assert.equal(report.ok, false)
+  assert.match(report.reason, /real failure/)
+  assert.equal(observed.filter((e) => e.role === 'builder').length, 1)
 })
