@@ -60,6 +60,8 @@ cd mimo-agent-pipeline
 
 Then restart `dsh web` and hard-refresh the browser.
 
+> **`dsh` name collisions on Linux:** two known traps — a leftover *broken* symlink at `/usr/local/bin/dsh` (an old Harness install) and an unrelated Debian package that ships its own `dsh` (**Dancer's shell**, seen here on 2026-11-18). `install.sh` and `verify.sh` therefore prefer `$DSH_CLI` over PATH and signature-check any PATH `dsh` against the Harness version output; if a gate fails with `FAIL: 'dsh' on PATH is Distributed Shell…`, run `export DSH_CLI=/path/to/dsh` (the source checkout's `apps/cli/lib/bin.js` works).
+
 ## How the pipeline works
 
 ### 1. Tiered model routing
