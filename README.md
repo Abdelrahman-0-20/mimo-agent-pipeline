@@ -27,6 +27,12 @@ flowchart TD
     DSH --> EX[Agency Agents<br/>331 experts + /review + /simplify]
 ```
 
+## Demo
+
+![Memory persistence and one relay run](docs/assets/demo.gif)
+
+*Captured live from the Harness Web GUI: **①** persisting knowledge-graph learnings via `mcp__memory__create_entities`, **②** a `mimo_relay` run — planner → builder → verifier — from the pricing-repo case test (see [docs/case-study-pricing.md](docs/case-study-pricing.md)).*
+
 ## Repository layout
 
 | Path | Purpose |
