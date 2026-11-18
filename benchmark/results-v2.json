@@ -1,0 +1,143 @@
+{
+  "meta": {
+    "label": "real usage — dsh headless --json over benchmark/model-overlay.yml; identical tasks per model; harness-default sampling",
+    "date": "2026-11-18T23:29:43.034Z",
+    "commit": "8fe426a",
+    "models": [
+      "mimo-v2.6-flash",
+      "mimo-v2.6-pro"
+    ],
+    "tasks": [
+      "rate-pipe-leak",
+      "count-coprime",
+      "mcc-compact",
+      "dsl-parse"
+    ]
+  },
+  "results": [
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "rate-pipe-leak",
+      "correct": true,
+      "wallMs": 9053,
+      "usage": {
+        "inputTokens": 6229,
+        "outputTokens": 63,
+        "totalTokens": 7316,
+        "cacheReadTokens": 1024
+      },
+      "answer": "8"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "count-coprime",
+      "correct": true,
+      "wallMs": 10738,
+      "usage": {
+        "inputTokens": 6201,
+        "outputTokens": 323,
+        "totalTokens": 7548,
+        "cacheReadTokens": 1024
+      },
+      "answer": "266"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "mcc-compact",
+      "correct": true,
+      "wallMs": 66359,
+      "usage": {
+        "inputTokens": 9465,
+        "outputTokens": 2466,
+        "totalTokens": 47771,
+        "cacheReadTokens": 35840
+      },
+      "answer": "function compact(events) {\n  const out = [];\n  for (const e of events) {\n    if (e.v === null || e.v === undefined) continue;\n    const last = out[out.length - 1];\n    if (last && last.v === e.v) continue;\n    out.push({ t: e.t, v: e.v });\n  }\n  return out;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "dsl-parse",
+      "correct": true,
+      "wallMs": 47053,
+      "usage": {
+        "inputTokens": 6285,
+        "outputTokens": 2002,
+        "totalTokens": 9311,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function parseAssignments(text) {\n  const out = {};\n  const isBare = (c) => c >= \"0\" && c <= \"9\" || (c >= \"A\" && c <= \"Z\") || (c >= \"a\" && c <= \"z\") || c === \"_\";\n  const isSpace = (c) => c === \" \" || c === \"\\t\";\n  const lines = String(text).split(/\\r\\n|\\r|\\n/);\n  for (const line of lines) {\n    const n = line.length;\n    let i = 0;\n    while (i < n && isSpace(line[i])) i++;\n    if (i >= n || line[i] === \"#\") continue;\n    const ks = i;\n    while (i < n && isBare(line[i])) i++;\n    if (i === ks) continue;\n    const key = line.slice(ks, i);\n    while (i < n && isSpace(line[i])) i++;\n    if (i >= n || line[i] !== \"=\") continue;\n    i++;\n    while (i < n && isSpace(line[i])) i++;\n    if (i >= n || line[i] === \"#\") continue;\n    let value;\n    if (line[i] === '\"') {\n      i++;\n      let buf = \"\";\n      let closed = false;\n      while (i < n) {\n        const c = line[i];\n        if (c === \"\\\\\" && i + 1 < n) {\n          const e = line[i + 1];\n          if (e === \"n\") buf += \"\\n\";\n          else if (e === '\"') buf += '\"';\n          else if (e === \"\\\\\") buf += \"\\\\\";\n          else { buf += c; i++; continue; }\n          i += 2;\n          continue;\n        }\n        if (c === '\"') { closed = true; i++; break; }\n        buf += c;\n        i++;\n      }\n      if (!closed) continue;\n      value = buf;\n    } else if (isBare(line[i])) {\n      const vs = i;\n      while (i < n && isBare(line[i])) i++;\n      value = line.slice(vs, i);\n    } else {\n      continue;\n    }\n    while (i < n && isSpace(line[i])) i++;\n    if (i < n && line[i] !== \"#\") continue;\n    out[key] = value;\n  }\n  return out;\n}"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "rate-pipe-leak",
+      "correct": true,
+      "wallMs": 3624,
+      "usage": {
+        "inputTokens": 6229,
+        "outputTokens": 66,
+        "totalTokens": 7319,
+        "cacheReadTokens": 1024
+      },
+      "answer": "8"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "count-coprime",
+      "correct": true,
+      "wallMs": 7413,
+      "usage": {
+        "inputTokens": 2234,
+        "outputTokens": 403,
+        "totalTokens": 7629,
+        "cacheReadTokens": 4992
+      },
+      "answer": "**266**"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "mcc-compact",
+      "correct": true,
+      "wallMs": 11073,
+      "usage": {
+        "inputTokens": 2527,
+        "outputTokens": 751,
+        "totalTokens": 16206,
+        "cacheReadTokens": 12928
+      },
+      "answer": "function compact(events) {\n  const result = [];\n  for (const e of events) {\n    if (e.v === null || e.v === undefined) continue;\n    const last = result[result.length - 1];\n    if (last && last.v === e.v) continue;\n    result.push({ t: e.t, v: e.v });\n  }\n  return result;\n}"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "dsl-parse",
+      "correct": true,
+      "wallMs": 82184,
+      "usage": {
+        "inputTokens": 8720,
+        "outputTokens": 7217,
+        "totalTokens": 42049,
+        "cacheReadTokens": 26112
+      },
+      "answer": "function parseAssignments(text) {\n  const result = {};\n  const lines = String(text).split(/\\r\\n|[\\n\\r]/);\n\n  for (const line of lines) {\n    let i = 0;\n    const n = line.length;\n    const isWs = (c) => c === ' ' || c === '\\t';\n    const skipWs = () => { while (i < n && isWs(line[i])) i++; };\n\n    skipWs();\n    if (i >= n || line[i] === '#') continue;\n\n    let key = '';\n    while (i < n && !isWs(line[i]) && line[i] !== '=' && line[i] !== '#' && line[i] !== '\"') {\n      key += line[i++];\n    }\n    if (!key) continue;\n\n    skipWs();\n    if (line[i] !== '=') continue;\n    i++;\n    skipWs();\n\n    let value = null;\n    if (line[i] === '\"') {\n      i++;\n      let out = '';\n      let closed = false;\n      while (i < n) {\n        const c = line[i];\n        if (c === '\\\\') {\n          const e = line[i + 1];\n          if (e === 'n') { out += '\\n'; i += 2; }\n          else if (e === '\"') { out += '\"'; i += 2; }\n          else if (e === '\\\\') { out += '\\\\'; i += 2; }\n          else if (e === undefined) { i = n; }\n          else { out += c + e; i += 2; }\n        } else if (c === '\"') {\n          closed = true;\n          i++;\n          break;\n        } else {\n          out += c;\n          i++;\n        }\n      }\n      if (!closed) continue;\n      value = out;\n    } else {\n      let out = '';\n      while (i < n && /[A-Za-z0-9_]/.test(line[i])) out += line[i++];\n      if (!out) continue;\n      value = out;\n    }\n\n    skipWs();\n    if (i < n && line[i] !== '#') continue;\n\n    Object.defineProperty(result, key, {\n      value: value,\n      enumerable: true,\n      writable: true,\n      configurable: true\n    });\n  }\n\n  return result;\n}"
+    }
+  ],
+  "aggregate": {
+    "mimo-v2.6-flash": {
+      "quality": "4/4",
+      "inputTokens": 28180,
+      "outputTokens": 4854,
+      "totalTokens": 71946,
+      "cacheReadTokens": 38912,
+      "avgWallMs": 33301,
+      "errors": 0
+    },
+    "mimo-v2.6-pro": {
+      "quality": "4/4",
+      "inputTokens": 19710,
+      "outputTokens": 8437,
+      "totalTokens": 73203,
+      "cacheReadTokens": 45056,
+      "avgWallMs": 26074,
+      "errors": 0
+    }
+  }
+}

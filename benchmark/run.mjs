@@ -73,6 +73,74 @@ function checkPalindrome(src) {
   }
 }
 
+/** Run generated code under child-node probes; exit0 only if every probe holds. */
+function runProbes(src, probeBody) {
+  const cleaned = extractFunction(src)
+  const harness = `
+    const fn = eval('(' + ${JSON.stringify(cleaned)} + ')')
+    if (typeof fn !== 'function') process.exit(2)
+    ${probeBody}
+    process.exit(0)
+  `
+  try {
+    execFileSync(process.execPath, ['-e', harness], { timeout: 10_000, stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+// v2 probes (String.raw: the harness source must keep its backslashes verbatim).
+const COMPACT_PROBES = String.raw`
+const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+if (!eq(fn([]), [])) process.exit(1)
+const input = [{t:1,v:'a'},{t:2,v:'a'}]
+const snap = JSON.stringify(input)
+if (!eq(fn(input), [{t:1,v:'a'}])) process.exit(1)
+if (JSON.stringify(input) !== snap) process.exit(1)
+if (!eq(fn([{t:1,v:'a'},{t:2,v:null},{t:3,v:'a'}]), [{t:1,v:'a'}])) process.exit(1)
+if (!eq(fn([{t:1,v:'a'},{t:2,v:'b'},{t:3,v:'a'}]), [{t:1,v:'a'},{t:2,v:'b'},{t:3,v:'a'}])) process.exit(1)
+if (!eq(fn([{t:1,v:''},{t:2,v:''}]), [{t:1,v:''}])) process.exit(1)
+if (!eq(fn([{t:1,v:'x'},{t:2,v:'y'}]), [{t:1,v:'x'},{t:2,v:'y'}])) process.exit(1)
+`
+
+const PARSE_PROBES = String.raw`
+const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+if (!eq(fn('x = hello'), {x:'hello'})) process.exit(1)
+if (!eq(fn('s = "line\\nnext"'), {s:'line\nnext'})) process.exit(1)
+if (!eq(fn('s = "has # inside"'), {s:'has # inside'})) process.exit(1)
+if (!eq(fn('y = 5 # comment'), {y:'5'})) process.exit(1)
+if (!eq(fn('k = 1\nk = 2'), {k:'2'})) process.exit(1)
+if (!eq(fn('q = "say \\"hi\\""'), {q:'say "hi"'})) process.exit(1)
+`
+
+const checkCompact = src => runProbes(src, COMPACT_PROBES)
+const checkParse = src => runProbes(src, PARSE_PROBES)
+
+/** v3: pre-declared adversarial set (2026-11-19) — declared before running. */
+const TOPSORT_PROBES = String.raw`
+const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+if (!eq(fn([{id:'a',deps:[]},{id:'b',deps:['a']},{id:'c',deps:['a']}]), ['a','b','c'])) process.exit(1)
+if (!eq(fn([{id:'b',deps:[]},{id:'a',deps:[]},{id:'c',deps:[]}]), ['a','b','c'])) process.exit(1)
+if (!eq(fn([{id:'a',deps:['b']},{id:'b',deps:['a']}]), null)) process.exit(1)
+if (!eq(fn([{id:'a',deps:['ghost']}]), null)) process.exit(1)
+if (!eq(fn([]), [])) process.exit(1)
+if (!eq(fn([{id:'z',deps:[]},{id:'y',deps:['z']}]), ['z','y'])) process.exit(1)
+`
+const ROUND_PROBES = String.raw`
+const eq = (a, b) => Math.abs(a - b) < 1e-9
+if (!eq(fn(2.5, 0), 2)) process.exit(1)
+if (!eq(fn(3.5, 0), 4)) process.exit(1)
+if (!eq(fn(-2.5, 0), -2)) process.exit(1)
+if (!eq(fn(-3.5, 0), -4)) process.exit(1)
+if (!eq(fn(0.125, 2), 0.12)) process.exit(1)
+if (!eq(fn(1.5, 0), 2)) process.exit(1)
+if (!eq(fn(-1.5, 0), -2)) process.exit(1)
+if (!eq(fn(1.4, 0), 1)) process.exit(1)
+`
+const checkTopsort = src => runProbes(src, TOPSORT_PROBES)
+const checkRound = src => runProbes(src, ROUND_PROBES)
+
 const TASKS = [
   {
     id: 'crt-ball-bat',
@@ -103,6 +171,42 @@ const TASKS = [
     id: 'code-palindrome',
     prompt: 'Write a JavaScript function isPalindrome(s) that returns true when the string reads the same forwards and backwards, ignoring case. Output ONLY the function source, no markdown fences and no commentary.',
     check: checkPalindrome,
+  },
+  // ---- v2: harder, discriminating tasks (Flash should not go 6/6) ----
+  {
+    id: 'rate-pipe-leak',
+    prompt: 'One pipe fills a tank in6 hours, a second pipe fills it in12 hours, and a leak empties a FULL tank in8 hours. All three are opened at once on an empty tank. How many hours does it take to fill the tank? Reply with just the number.',
+    check: text => hasNumber(text, 8),
+  },
+  {
+    id: 'count-coprime',
+    prompt: 'How many integers between1 and1000 inclusive are NOT divisible by2, by3, or by5? Reply with just the number.',
+    check: text => hasNumber(text, 266),
+  },
+  {
+    id: 'mcc-compact',
+    prompt: 'Write a JavaScript function compact(events) where events is an array of {t, v} objects already sorted by t. Rules: (1) FIRST remove every event whose v is null or undefined, before any merging; (2) THEN merge each run of consecutive events with the same v into one event whose t is the t of the FIRST event of that run; (3) events with v equal to the empty string are kept; (4) return a NEW array and never mutate the input; (5) empty input returns []; (6) output ONLY the function source - no fences, no commentary, no other code.',
+    check: checkCompact,
+  },
+  {
+    id: 'dsl-parse',
+    prompt: 'Write a JavaScript function parseAssignments(text) that parses assignment lines. Each non-empty line is `key = value` (optional spaces around =). A value is either a double-quoted string supporting the escapes \\n, \\", and \\\\ , or a bare token of letters/digits/underscores. Anything from an unquoted # to end of line is a comment. Blank/comment-only lines are skipped. If a key repeats, the LAST assignment wins. Return a plain object mapping key to STRING values. Output ONLY the function source - no fences, no commentary.',
+  },
+  // ---- v3: pre-declared adversarial tasks (declared before the run) ----
+  {
+    id: 'code-topsort-lex',
+    prompt: 'Write a JavaScript function orderJobs(jobs) where jobs is an array of {id, deps} objects (deps = ids of jobs that must finish first). Return the lexicographically-smallest valid topological order as an array of ids (when several jobs are runnable, always take the alphabetically smallest id). If there is a cycle, or a dep references an id not present in jobs, return null. Empty input returns []. Output ONLY the function source - no fences, no commentary.',
+    check: checkTopsort,
+  },
+  {
+    id: 'code-bankers-round',
+    prompt: 'Write a JavaScript function roundHalfEven(x, digits) that rounds the number x to the given number of decimal places using banker\'s rounding (round-half-to-even): exactly-half values round to the NEAREST EVEN digit. Treat the input as exact decimal (no floating-point-representation fixes are needed): exactly-half values at the requested precision round half to even, everything else rounds to nearest. Output ONLY the function source - no fences, no commentary.',
+    check: checkRound,
+  },
+  {
+    id: 'frac-exact-hearts',
+    prompt: 'Two cards are drawn uniformly at random from a standard52-card deck WITHOUT replacement. What is the probability that BOTH are hearts? Reply ONLY as an irreducible fraction in the form a/b (no words, no other text).',
+    check: text => { const m = String(text).trim().match(/^(\d+)\s*\/\s*(\d+)$/); return m !== null && Number(m[1]) * 17 === Number(m[2]) && Number(m[1]) > 0 },
   },
 ]
 

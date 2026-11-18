@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "label": "real usage — dsh headless --json over benchmark/model-overlay.yml; identical tasks per model; harness-default sampling",
+    "date": "2026-11-18T23:45:47.536Z",
+    "commit": "8fe426a",
+    "models": [
+      "mimo-v2.6-flash",
+      "mimo-v2.6-pro"
+    ],
+    "tasks": [
+      "code-topsort-lex",
+      "code-bankers-round",
+      "frac-exact-hearts"
+    ]
+  },
+  "results": [
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "code-topsort-lex",
+      "correct": true,
+      "wallMs": 12611,
+      "usage": {
+        "inputTokens": 6271,
+        "outputTokens": 332,
+        "totalTokens": 7627,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function orderJobs(jobs) {\n  if (!Array.isArray(jobs) || jobs.length === 0) return [];\n\n  const idSet = new Set();\n  const indegree = new Map();\n  const graph = new Map();\n\n  for (const job of jobs) {\n    if (!job || typeof job.id !== 'string') return null;\n    if (idSet.has(job.id)) return null;\n    idSet.add(job.id);\n    indegree.set(job.id, 0);\n    graph.set(job.id, []);\n  }\n\n  for (const job of jobs) {\n    const deps = Array.isArray(job.deps) ? job.deps : [];\n    for (const dep of deps) {\n      if (!idSet.has(dep)) return null;\n      if (dep === job.id) return null;\n      graph.get(dep).push(job.id);\n      indegree.set(job.id, indegree.get(job.id) + 1);\n    }\n  }\n\n  const ready = [...idSet].filter(id => indegree.get(id) === 0).sort();\n  const result = [];\n\n  while (ready.length > 0) {\n    const id = ready.shift();\n    result.push(id);\n    for (const next of graph.get(id)) {\n      indegree.set(next, indegree.get(next) - 1);\n      if (indegree.get(next) === 0) {\n        ready.push(next);\n        ready.sort();\n      }\n    }\n  }\n\n  return result.length === jobs.length ? result : null;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "code-bankers-round",
+      "correct": true,
+      "wallMs": 23674,
+      "usage": {
+        "inputTokens": 6262,
+        "outputTokens": 858,
+        "totalTokens": 8144,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function roundHalfEven(x, digits) {\n  const f = Math.pow(10, digits);\n  const y = x * f;\n  const floor = Math.floor(y);\n  const frac = y - floor;\n  let r;\n  if (frac > 0.5) {\n    r = floor + 1;\n  } else if (frac < 0.5) {\n    r = floor;\n  } else {\n    r = (floor % 2 === 0) ? floor : floor + 1;\n  }\n  const result = r / f;\n  return result === 0 ? 0 : result;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "task": "frac-exact-hearts",
+      "correct": true,
+      "wallMs": 4644,
+      "usage": {
+        "inputTokens": 6217,
+        "outputTokens": 37,
+        "totalTokens": 7278,
+        "cacheReadTokens": 1024
+      },
+      "answer": "1/17"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "code-topsort-lex",
+      "correct": true,
+      "wallMs": 35008,
+      "usage": {
+        "inputTokens": 4344,
+        "outputTokens": 2800,
+        "totalTokens": 19944,
+        "cacheReadTokens": 12800
+      },
+      "answer": "function orderJobs(jobs) {\n  if (!Array.isArray(jobs)) return null;\n  if (jobs.length === 0) return [];\n  const indeg = new Map();\n  const adj = new Map();\n  for (const job of jobs) {\n    if (indeg.has(job.id)) return null;\n    indeg.set(job.id, 0);\n    adj.set(job.id, []);\n  }\n  for (const job of jobs) {\n    for (const dep of job.deps || []) {\n      if (!indeg.has(dep)) return null;\n      adj.get(dep).push(job.id);\n      indeg.set(job.id, indeg.get(job.id) + 1);\n    }\n  }\n  const ready = [...indeg.keys()].filter((id) => indeg.get(id) === 0).sort();\n  const order = [];\n  while (ready.length > 0) {\n    const id = ready.shift();\n    order.push(id);\n    for (const next of adj.get(id)) {\n      const d = indeg.get(next) - 1;\n      indeg.set(next, d);\n      if (d === 0) {\n        let i = 0;\n        while (i < ready.length && ready[i] < next) i++;\n        ready.splice(i, 0, next);\n      }\n    }\n  }\n  return order.length === indeg.size ? order : null;\n}"
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "code-bankers-round",
+      "correct": false,
+      "wallMs": 180015,
+      "usage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0,
+        "cacheReadTokens": 0
+      },
+      "answer": "",
+      "error": "exit null: "
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "task": "frac-exact-hearts",
+      "correct": true,
+      "wallMs": 3935,
+      "usage": {
+        "inputTokens": 1612,
+        "outputTokens": 50,
+        "totalTokens": 7294,
+        "cacheReadTokens": 5632
+      },
+      "answer": "1/17"
+    }
+  ],
+  "aggregate": {
+    "mimo-v2.6-flash": {
+      "quality": "3/3",
+      "inputTokens": 18750,
+      "outputTokens": 1227,
+      "totalTokens": 23049,
+      "cacheReadTokens": 3072,
+      "avgWallMs": 13643,
+      "errors": 0
+    },
+    "mimo-v2.6-pro": {
+      "quality": "2/3",
+      "inputTokens": 5956,
+      "outputTokens": 2850,
+      "totalTokens": 27238,
+      "cacheReadTokens": 18432,
+      "avgWallMs": 72986,
+      "errors": 1
+    }
+  }
+}

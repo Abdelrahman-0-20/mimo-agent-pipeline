@@ -126,6 +126,18 @@ Real usage captured **2026-11-17** at commit `0e59f04`: every row is a fresh `ds
 - **Input/cache figures are order-dependent** — runs executed sequentially, and the headless persona embeds the model name, so each model has its own prompt prefix and server-side cache warmth. Do not read the uncached-input gap as a model property.
 - Latency was comparable (≈5 s/task for both).
 
+**v2 + v3 — harder, pre-declared tasks (2026-11-19):** four harder tasks (`results-v2.json`) and then three adversarial ones declared *before* running (`results-v3.json`) — every behavioral probe was validated first to reject naive implementations (merge-before-drop parsers, `toFixed` rounding, unsorted greedy topological sort).
+
+| Model | v2 (4 tasks) | v3 (3 tasks) | v3 output tok | v3 avg wall |
+|---|---|---|---|---|
+| `mimo-v2.6-flash` | **4/4** | **3/3** | 1,227 | 13.6s |
+| `mimo-v2.6-pro` | **4/4** | **2/3** (one API stall) | 2,850 | 73.0s |
+
+- **Quality still does not discriminate at this difficulty.** Every answer the models actually produced was correct — including on the probes proven to reject naive solutions. The one Pro "failure" was infrastructure, not reasoning: two attempts of `code-bankers-round` hit the runner's 180 s cap with **0 tokens** (server-side stall), and a targeted re-run passed in 82 s.
+- Both models answered the probability task as `1/17` — the correct *irreducible* form of 13/221 (the first v3 label was my check demanding the unreduced fraction; the models were right and the check was wrong).
+- What differs is **cost and latency**: Pro spent 2.3× Flash's output tokens on v3 and averaged 73 s vs 14 s (its average includes the stalled run).
+- **Open question for a future iteration:** one-shot codegen and puzzle logic do not separate these two models; long-horizon agentic work (exercised qualitatively by the two case studies) remains the candidate discriminating axis.
+
 Reproduce (requires the stored MiMo credential in the DSH credentials service — never a key in this repo):
 
 ```bash
