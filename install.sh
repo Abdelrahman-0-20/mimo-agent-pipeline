@@ -9,9 +9,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31mFAIL:\033[0m %s\n' "$*" >&2; exit 1; }
 
-# locate the dsh CLI: PATH, then DSH_CLI override
-if command -v dsh >/dev/null 2>&1; then DSH_BIN=dsh
-elif [ -n "${DSH_CLI:-}" ]; then DSH_BIN="$DSH_CLI"
+# locate the dsh CLI: DSH_CLI override first, then a PATH `dsh` that must
+# actually be DeepSeek Harness (an unrelated Debian "dsh" — Dancer's shell —
+# can sit on PATH and otherwise hijack this lookup).
+if [ -n "${DSH_CLI:-}" ]; then DSH_BIN="$DSH_CLI"
+elif command -v dsh >/dev/null 2>&1 && dsh --version 2>/dev/null | head -1 | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then DSH_BIN=dsh
+elif command -v dsh >/dev/null 2>&1; then
+  fail "'dsh' on PATH is $(dsh --version 2>&1 | head -1 | cut -c1-60), not DeepSeek Harness — export DSH_CLI=/path/to/dsh"
 else fail "dsh not found on PATH — install DeepSeek Harness or export DSH_CLI=/path/to/dsh"
 fi
 

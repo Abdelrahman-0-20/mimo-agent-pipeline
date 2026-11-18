@@ -31,7 +31,7 @@ flowchart TD
 
 ![Memory persistence and one relay run](docs/assets/demo.gif)
 
-*Captured live from the Harness Web GUI: **①** persisting knowledge-graph learnings via `mcp__memory__create_entities`, **②** a `mimo_relay` run — planner → builder → verifier — from the pricing-repo case test (see [docs/case-study-pricing.md](docs/case-study-pricing.md)).*
+*Captured live from the Harness Web GUI: **①** persisting knowledge-graph learnings via `mcp__memory__create_entities`, **②** a `mimo_relay` run — planner → builder → verifier — from the pricing-repo case test. Two full case studies document the pipeline on real work: [review & fix on a mature repo](docs/case-study-pricing.md) and [building an MLOps project from zero](docs/case-study-greenfield.md).*
 
 ## Repository layout
 
@@ -199,7 +199,7 @@ Four levers, each verified live:
 | **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role keys, connector locks | done |
 | **v0.6** | **Cost & reach** — thinking-off-on-discovery · role-scoped connector packs · `context7` live-docs connector (check #10) · standalone stdio MCP server for other editors | done |
 | **v0.7** | **Public launch** — final secret scan → repo goes public · demo GIF (memory recall + one relay run) · GitHub profile README + repo descriptions | pending |
-| **v1.0** | Case study: the pipeline builds a full MLOps project end-to-end via the relay · harder benchmark tasks | pending |
+| **v1.0** | Case study: the pipeline builds a full MLOps project end-to-end via the relay · harder benchmark tasks | ✅ case study shipped (`breast-cancer-mlops`, [greenfield write-up](docs/case-study-greenfield.md)) · benchmark v2 pending |
 
 ### The plan after v0.5
 

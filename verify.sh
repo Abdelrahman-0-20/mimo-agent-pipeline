@@ -3,8 +3,13 @@
 set -uo pipefail
 
 PROFILE="${DSH_PROFILE:-web}"
-if command -v dsh >/dev/null 2>&1; then DSH_BIN=dsh
-elif [ -n "${DSH_CLI:-}" ]; then DSH_BIN="$DSH_CLI"
+# Prefer an explicit DSH_CLI; a PATH `dsh` must actually be DeepSeek Harness
+# (an unrelated Debian package named "dsh" — Dancer's shell — was installed
+# on this box mid-session and hijacked this lookup with "unrecognized option").
+if [ -n "${DSH_CLI:-}" ]; then DSH_BIN="$DSH_CLI"
+elif command -v dsh >/dev/null 2>&1 && dsh --version 2>/dev/null | head -1 | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then DSH_BIN=dsh
+elif command -v dsh >/dev/null 2>&1; then
+  echo "FAIL: 'dsh' on PATH is $(dsh --version 2>&1 | head -1 | cut -c1-60), not DeepSeek Harness — export DSH_CLI=/path/to/dsh"; exit 1
 else echo "FAIL: dsh not found on PATH (or set DSH_CLI)"; exit 1; fi
 
 DUMP="$("$DSH_BIN" --profile "$PROFILE" --dump-config 2>/dev/null)" || { echo "FAIL: dsh --dump-config errored"; exit 1; }
