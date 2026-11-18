@@ -163,7 +163,7 @@ plugin · unit tests ..................... PASS   node --test (escalator + relay
 One bundle — [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) — installs the **`mimo_relay`** tool plus four role presets; the escalator keys its state per `<workspace>:<role>`.
 
 - **Role-scoped connector packs** — planner (github + memory + context7, pinned Pro) · scouts (repo/DB/docs read-only, parallel Flash) · builder (write + shell, single-writer lock, 2-strike escalation) · verifier (playwright + E2E, single-browser lock). DSH isolates MCP tools per agent scope, so scoping also cuts per-request tool-schema tokens and KV-cache churn.
-- **Verified connector packages (2026-11-17):** `@upstash/context7-mcp` ✅ `4.7.3` · `@modelcontextprotocol/server-postgres` ✅ `0.6.2` · `@modelcontextprotocol/server-sqlite` ❌ **does not exist — do not use**
+- **Verified connector packages (2026-11-17):** `@upstash/context7-mcp` done `4.7.3` · `@modelcontextprotocol/server-postgres` done `0.6.2` · `@modelcontextprotocol/server-sqlite` no **does not exist — do not use**
 - **Per-role escalator keys** — `<workspace>:<role>` (e.g. `repo:builder`) so a builder's 2-strike failure never escalates the planner. Escalation is role-level: every session of the role adopts it on its next counted round, and stale sessions return home after the role demotes. Store version bumped to v2 (v1 session-id keys load as empty).
 - **Sequential relay** — `mimo_relay` drives Planner (Pro, read-only) → Builder (Flash) → Verifier (Flash) over the DSH `spawn` subagent backend: each phase runs on its role preset, holds its connector lock (`reader:` / `writer:` / `browser:<workspace>`) for the whole phase, and passes its handoff through the backend's `outputSchema`. Locks are exclusive FIFO mutexes in v0.5 — parallel readers and cross-relay snapshot isolation are deferred.
 - **Handoff contract** — planner emits `{files, testPlan}`; the builder claims `status: "pass"` only when every testPlan command exited 0; the verifier reports `{defects, summary}` and never patches. Any contract violation aborts the relay at that phase with the reason.
@@ -192,14 +192,14 @@ Four levers, each verified live:
 
 | Version | Ships | Status |
 |---|---|---|
-| **v0.1** | Config kit + install/verify scripts + gates | ✅ |
-| **v0.2** | CI: fresh-machine reproducibility gate + secret scan + badge | ✅ |
-| **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed rounds (original code) | ✅ |
-| **v0.4** | Metrics + persistence/TTL + CI-status detection + real-usage benchmark | ✅ |
-| **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role keys, connector locks | ✅ |
-| **v0.6** | **Cost & reach** — thinking-off-on-discovery · role-scoped connector packs · `context7` live-docs connector (check #10) · standalone stdio MCP server for other editors | ✅ |
-| **v0.7** | **Public launch** — final secret scan → repo goes public · demo GIF (memory recall + one relay run) · GitHub profile README + repo descriptions | ⬜ |
-| **v1.0** | Case study: the pipeline builds a full MLOps project end-to-end via the relay · harder benchmark tasks | ⬜ |
+| **v0.1** | Config kit + install/verify scripts + gates | done |
+| **v0.2** | CI: fresh-machine reproducibility gate + secret scan + badge | done |
+| **v0.3** | **Auto-escalation plugin** — Flash→Pro after 2 failed rounds (original code) | done |
+| **v0.4** | Metrics + persistence/TTL + CI-status detection + real-usage benchmark | done |
+| **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role keys, connector locks | done |
+| **v0.6** | **Cost & reach** — thinking-off-on-discovery · role-scoped connector packs · `context7` live-docs connector (check #10) · standalone stdio MCP server for other editors | done |
+| **v0.7** | **Public launch** — final secret scan → repo goes public · demo GIF (memory recall + one relay run) · GitHub profile README + repo descriptions | pending |
+| **v1.0** | Case study: the pipeline builds a full MLOps project end-to-end via the relay · harder benchmark tasks | pending |
 
 ### The plan after v0.5
 
