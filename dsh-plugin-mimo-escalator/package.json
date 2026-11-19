@@ -20,7 +20,7 @@
     "llm-ops"
   ],
   "bin": {
-    "mimo-escalator-mcp": "./mcp-server.mjs"
+    "mimo-escalator-mcp": "mcp-server.mjs"
   },
   "repository": {
     "type": "git",
