@@ -34,7 +34,7 @@ import {
   saveStore,
 } from './src/store.js'
 
-const SERVER_INFO = { name: 'mimo-escalator', version: '0.6.0' }
+const SERVER_INFO = { name: 'mimo-escalator', version: '1.0.0' }
 const PROTOCOL_FALLBACK = '2025-06-18'
 
 const envInt = (name, fallback) => {

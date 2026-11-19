@@ -1,17 +1,36 @@
 {
   "name": "dsh-plugin-mimo-escalator",
-  "version": "0.4.0",
-  "description": "Auto-escalates a DeepSeek Harness session from mimo-v2.6-flash to mimo-v2.6-pro after two consecutive failed verification rounds, then returns to Flash after sustained passes.",
+  "version": "1.0.0",
+  "description": "Auto-escalate LLM agents from mimo-v2.6-flash to mimo-v2.6-pro after two consecutive failed verification rounds (hysteresis), with durable per-workspace metrics. Ships as a DeepSeek Harness plugin AND a zero-dependency stdio MCP server for Claude Code, Cursor, and any MCP client.",
   "type": "module",
-  "private": true,
   "license": "MIT",
   "keywords": [
     "dsh",
     "deepseek-harness",
+    "mcp",
+    "model-server-protocol",
     "mimo",
     "model-routing",
-    "escalation"
+    "escalation",
+    "hysteresis",
+    "ai-agents",
+    "claude-code",
+    "cursor",
+    "stdio",
+    "llm-ops"
   ],
+  "bin": {
+    "mimo-escalator-mcp": "./mcp-server.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Abdelrahman-0-20/mimo-agent-pipeline.git",
+    "directory": "dsh-plugin-mimo-escalator"
+  },
+  "homepage": "https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/tree/main/dsh-plugin-mimo-escalator",
+  "bugs": {
+    "url": "https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/issues"
+  },
   "exports": {
     ".": "./src/index.js",
     "./mcp-server": "./mcp-server.mjs",

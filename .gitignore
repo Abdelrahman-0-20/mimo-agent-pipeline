@@ -20,3 +20,4 @@ mimo-escalator-state.json
 # noise
 .DS_Store
 *.log
+.verify-tools/

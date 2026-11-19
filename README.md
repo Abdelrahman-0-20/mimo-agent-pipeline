@@ -2,7 +2,7 @@
 
 > An end-to-end **autonomous engineering pipeline** for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): tiered **Xiaomi MiMo** routing with a self-written auto-escalation plugin, persistent MCP memory, independent code review, and deterministic verification gates.
 
-![version](https://img.shields.io/badge/version-v0.6.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![CI](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/actions/workflows/ci.yml/badge.svg)
+![version](https://img.shields.io/badge/version-v1.0.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![CI](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/actions/workflows/ci.yml/badge.svg)
 
 ## What you get
 
@@ -26,12 +26,6 @@ flowchart TD
     DSH -->|MCP| PW[playwright<br/>screenshots -> vision]
     DSH --> EX[Agency Agents<br/>331 experts + /review + /simplify]
 ```
-
-## Demo
-
-![Memory persistence and one relay run](docs/assets/demo.gif)
-
-*Captured live from the Harness Web GUI: **①** persisting knowledge-graph learnings via `mcp__memory__create_entities`, **②** a `mimo_relay` run — planner → builder → verifier — from the pricing-repo case test. Two full case studies document the pipeline on real work: [review & fix on a mature repo](docs/case-study-pricing.md) and [building an MLOps project from zero](docs/case-study-greenfield.md).*
 
 ## Repository layout
 
@@ -196,6 +190,9 @@ Four levers, each verified live:
 - **Standalone stdio MCP server** — [`dsh-plugin-mimo-escalator/mcp-server.mjs`](dsh-plugin-mimo-escalator/mcp-server.mjs): zero-dependency JSON-RPC over stdio exposing the *same* state machine and store as `mescal_status` and `mescal_record_round`, so Cursor / Claude Code / VS Code hooks can drive escalation decisions:
 
   ```bash
+  npm install -g dsh-plugin-mimo-escalator    # provides the `mimo-escalator-mcp` bin
+  claude mcp add escalator -- mimo-escalator-mcp
+  # or straight from this repo:
   claude mcp add escalator -- node /path/to/dsh-plugin-mimo-escalator/mcp-server.mjs
   # optional: MIMO_ESCALATOR_STATE=... MIMO_ESCALATOR_THRESHOLD=2 MIMO_ESCALATOR_DEMOTE_THRESHOLD=2
   ```
