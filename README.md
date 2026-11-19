@@ -26,10 +26,10 @@ flowchart TD
     DSH -->|MCP| PW[playwright<br/>screenshots -> vision]
     DSH --> EX[Agency Agents<br/>331 experts + /review + /simplify]
 ```
-
 ## Demo
 
-## [Memory persistence and one relay run](docs/assets/demo.gif)
+<!-- ![Memory persistence and one relay run](docs/assets/demo.gif) -->
+
 
 *Captured live from the Harness Web GUI: **①** persisting knowledge-graph learnings via `mcp__memory__create_entities`, **②** a `mimo_relay` run — planner → builder → verifier — from the pricing-repo case test. Two full case studies document the pipeline on real work: [review & fix on a mature repo](docs/case-study-pricing.md) and [building an MLOps project from zero](docs/case-study-greenfield.md).*
 
