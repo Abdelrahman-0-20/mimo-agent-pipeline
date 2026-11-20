@@ -192,6 +192,7 @@ const TASKS = [
   {
     id: 'dsl-parse',
     prompt: 'Write a JavaScript function parseAssignments(text) that parses assignment lines. Each non-empty line is `key = value` (optional spaces around =). A value is either a double-quoted string supporting the escapes \\n, \\", and \\\\ , or a bare token of letters/digits/underscores. Anything from an unquoted # to end of line is a comment. Blank/comment-only lines are skipped. If a key repeats, the LAST assignment wins. Return a plain object mapping key to STRING values. Output ONLY the function source - no fences, no commentary.',
+    check: checkParse,
   },
   // ---- v3: pre-declared adversarial tasks (declared before the run) ----
   {
