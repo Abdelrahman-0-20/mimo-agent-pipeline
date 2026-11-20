@@ -40,7 +40,7 @@ flowchart TD
 | [`config/cordis.patch.yml.example`](config/cordis.patch.yml.example) | Pipeline config template — MiMo routes + reasoning levels + 4 MCP servers (sanitized) |
 | [`config/settings.yaml.example`](config/settings.yaml.example) | Same routing in DSH's `settings.yaml` style |
 | [`install.sh`](install.sh) | Installs the 3 MichengAI plugins + the local escalator, relay & think bundles + pinned memory server |
-| [`verify.sh`](verify.sh) | Exit-code-0 gate: proves all 11 components mounted via `dsh --dump-config` |
+| [`verify.sh`](verify.sh) | Exit-code-0 gate: proves all 12 components mounted via `dsh --dump-config` |
 | [`dsh-plugin-mimo-escalator/`](dsh-plugin-mimo-escalator/) | **Original plugin (v0.3–v0.6)** — auto Flash↔Pro escalation with hysteresis, per-role `<workspace>:<role>` state keys, persistence, metrics, CI-status detection, thinking-off-on-discovery effort policy, standalone stdio MCP server (`mcp-server.mjs`) · `npm test` |
 | [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) | **Original plugin (v0.5/v0.6)** — `mimo_relay` tool: Planner→Builder→Verifier over the `spawn` backend with role presets, connector locks, schema-checked handoff, per-role tool scoping (builder 85 → 9 schemas) · `npm test` |
 | [`dsh-plugin-mimo-think/`](dsh-plugin-mimo-think/) | **Original plugin (v0.1)** — reasoning enhancer: prompt-scoring effort boost (hysteresis + TTL, re-asserts on work), `mimo_think` deep-reasoning child (Pro @ high, read-only, structured verdict), `mthink_status` metrics · `npm test` |
@@ -57,7 +57,7 @@ git clone https://github.com/Abdelrahman-0-20/mimo-agent-pipeline.git
 cd mimo-agent-pipeline
 ./install.sh                              # plugins + escalator + relay + memory server
 # merge config/cordis.patch.yml.example into $DSH_HOME/profiles/<profile>/cordis.patch.yml
-./verify.sh                               # must print 11x PASS and exit 0
+./verify.sh                               # must print 12x PASS and exit 0
 ```
 
 Then restart `dsh web` and hard-refresh the browser.
@@ -224,7 +224,7 @@ Four levers, each verified live:
   # optional: MIMO_ESCALATOR_STATE=... MIMO_ESCALATOR_THRESHOLD=2 MIMO_ESCALATOR_DEMOTE_THRESHOLD=2
   ```
 
-**Evidence:** 42 escalator + 20 relay + 74 think tests (`node --test`, exit 0); `verify.sh` **11/11**; a live effort off/on cycle with persisted tokenMeter samples; a live relay re-run under scoping (plan → build `pass` → verifier `defects: []`, all locks released).
+**Evidence:** 42 escalator + 20 relay + 74 think tests (`node --test`, exit 0); `verify.sh` **12/12**; a live effort off/on cycle with persisted tokenMeter samples; a live relay re-run under scoping (plan → build `pass` → verifier `defects: []`, all locks released).
 
 ## Thinking enhancer (v1.1, shipped)
 

@@ -32,6 +32,18 @@ check "mimo-relay"             "Multi-agent relay (Planner->Builder->Verifier)"
 check "serverName: context7"   "context7 live-docs connector"
 check "mimo-think"           "MiMo thinking enhancer (prompt boost + mimo_think)"
 
+# Bundle patches must parse. Same workaround as ci.yml: strip the Loader-evaluated
+# '!!js ' prefixes first — js-yaml's default schema rejects the tag on files that
+# are perfectly valid for the Cordis Loader (dsh-plugin-authoring §1).
+npm_config_cache="${npm_config_cache:-/tmp/npm-cache-dsh}"; export npm_config_cache
+patches_ok=1
+for f in dsh-plugin-*/cordis.patch.yml config/cordis.patch.yml.example; do
+  [ -f "$f" ] || continue
+  npx -y js-yaml@5.5.0 <(sed 's/!!js //g' "$f") > /dev/null || { echo "FAIL  parse $f"; patches_ok=0; }
+done
+if [ "$patches_ok" -eq 1 ]; then echo "PASS  cordis.patch.yml files parse (!!js stripped)"; pass=$((pass+1));
+else failed=$((failed+1)); fi
+
 echo "----"
 echo "$pass passed, $failed failed"
 [ "$failed" -eq 0 ] || exit 1
