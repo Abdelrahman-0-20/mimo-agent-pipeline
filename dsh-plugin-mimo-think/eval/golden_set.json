@@ -1,0 +1,1234 @@
+{
+  "protocolVersion": "blind-dual-v1",
+  "frozenAt": "2026-11-20T11:22:06.064Z",
+  "provenance": {
+    "hash": "sha256:8af300c6cc510d6658668676517eeaf21f1f4f9a71df5b898eaa2010ab476c31",
+    "labelers": 2,
+    "adjudications": 2,
+    "sources": [
+      "synthetic",
+      "session-anon"
+    ],
+    "note": "Two independent blind passes (labelers saw only texts and the rubric - never the scorer, never outcomes); two disagreements resolved by a third blind adjudication pass. Composition deviates from the DESIGN.md 30/30/20 target (actual 35/41/11) because the blind protocol governed over the author's draft intent; the coordinator's pre-adjudication readings differed on 8 of 80 synthetic items and were overridden by the passes."
+  },
+  "composition": {
+    "should_boost": 35,
+    "should_release": 41,
+    "ambiguous": 11,
+    "sequences": 11
+  },
+  "examples": [
+    {
+      "id": "p-001",
+      "text": "Design a zero-downtime migration from our monolith to services: the schema must stay compatible, we must be able to roll back at any point, and the cutover needs a numbered plan.",
+      "label": "should_boost",
+      "rationale": "multi-constraint migration design with rollback plan",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-002",
+      "text": "Our Node worker pool sometimes double-processes jobs. The claim at WorkerPool.js:84 races the ack. Reproduce the race and design the fix.",
+      "label": "should_boost",
+      "rationale": "race root-cause and fix design",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-003",
+      "text": "Security review: our session tokens survive logout in other tabs. Trace the replay path and propose hardening.",
+      "label": "should_boost",
+      "rationale": "security trace and hardening",
+      "source": "synthetic",
+      "signals_expected": [
+        "security"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-004",
+      "text": "Compare PostgreSQL vs SQLite for 10M-row embedded telemetry: trade-offs on writes, backups, and query plans.",
+      "label": "should_boost",
+      "rationale": "trade-off comparison with constraints",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-005",
+      "text": "This query does a nested scan over 120k rows per request. Analyze the complexity and design a faster approach with proof.",
+      "label": "should_boost",
+      "rationale": "complexity analysis with proof",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-006",
+      "text": "CI fails only on Fridays, always the same job, always a timeout. Analyze the likely causes from the schedule data.",
+      "label": "should_boost",
+      "rationale": "root-cause from schedule data",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis",
+        "debug"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-007",
+      "text": "Design a distributed rate limiter for the API gateway: it must survive node loss, deploy without downtime, and keep p99 under 20ms.",
+      "label": "should_boost",
+      "rationale": "multi-constraint distributed design",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-008",
+      "text": "Event sourcing vs CRUD for order history with audit requirements - analyze the trade-offs and recommend one.",
+      "label": "should_boost",
+      "rationale": "architectural trade-off analysis",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-009",
+      "text": "Two git worktrees corrupt the index under concurrent edits. Root-cause the lock ordering and design the fix.",
+      "label": "should_boost",
+      "rationale": "concurrency root-cause and fix",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-010",
+      "text": "Plan the Jenkins to GitHub Actions migration for 40 pipelines: keep artifacts and status checks, phase it, list the risks.",
+      "label": "should_boost",
+      "rationale": "phased migration planning with risks",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-011",
+      "text": "Our sandbox lets children write outside the workspace via a symlink follow. Find the hole and design the patch.",
+      "label": "should_boost",
+      "rationale": "security hole trace and patch",
+      "source": "synthetic",
+      "signals_expected": [
+        "security",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-012",
+      "text": "p95 latency jumped to 2s right after Tuesday's deploy. Profile: ```\nhistogram: bimodal, 90% at 80ms, 10% at 2s\n```\nExplain the cause and how to confirm it.",
+      "label": "should_boost",
+      "rationale": "performance root-cause diagnosis",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug",
+        "code"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-013",
+      "text": "Design a cache invalidation strategy for product prices that stays correct under concurrent updates.",
+      "label": "should_boost",
+      "rationale": "correctness under concurrency design",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-014",
+      "text": "Service A calls B, B calls A; we saw a deadlock in production. Prove the cycle from the traces and design the fix.",
+      "label": "should_boost",
+      "rationale": "prove deadlock cycle and fix",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-015",
+      "text": "Compare hash vs time sharding for the events table, with migration steps and the trade-offs of each.",
+      "label": "should_boost",
+      "rationale": "sharding trade-offs plus migration steps",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-016",
+      "text": "Seq scan on 50M rows. Design the index strategy and prove the chosen plan with the planner output.",
+      "label": "should_boost",
+      "rationale": "index strategy with plan proof",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-017",
+      "text": "Design a minimal set-cover selection over log sources and analyze its complexity.",
+      "label": "should_boost",
+      "rationale": "algorithm design and complexity analysis",
+      "source": "synthetic",
+      "signals_expected": [
+        "design",
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-018",
+      "text": "Write the rollback plan for a risky column migration: numbered steps, gates, and the abort criteria.",
+      "label": "should_boost",
+      "rationale": "gates and abort-criteria planning",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-019",
+      "text": "RSS grows with every request until restart. Design the diagnosis from heap-snapshot evidence.",
+      "label": "should_boost",
+      "rationale": "diagnosis design from heap evidence",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-020",
+      "text": "Design encryption at rest with key rotation and no downtime; include the threat model.",
+      "label": "should_boost",
+      "rationale": "security design with threat model",
+      "source": "synthetic",
+      "signals_expected": [
+        "security",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-021",
+      "text": "Our retry storm amplified the outage. Analyze the causal chain and design backpressure.",
+      "label": "should_boost",
+      "rationale": "causal chain analysis and design",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-022",
+      "text": "Design an idempotent webhook receiver: duplicates, ordering, and replay window are all constraints.",
+      "label": "should_boost",
+      "rationale": "multi-constraint protocol design",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-023",
+      "text": "Refactor plan for a 200-file module split without breaking imports; phase it and prove safety.",
+      "label": "should_boost",
+      "rationale": "phased refactor with safety proof",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-024",
+      "text": "Two nodes diverged after a network partition; which write is authoritative? Design the tiebreak and justify it.",
+      "label": "should_boost",
+      "rationale": "consistency tiebreak justification",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-025",
+      "text": "Fuzzing found an input that pins CPU at 100%. Analyze the parser path and design the fix.",
+      "label": "should_boost",
+      "rationale": "root-cause CPU pin and fix",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug",
+        "analysis",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-026",
+      "text": "Design a least-privilege permission model for multi-tenant CI runners with full auditability.",
+      "label": "should_boost",
+      "rationale": "least-privilege model design with audit",
+      "source": "synthetic",
+      "signals_expected": [
+        "security",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-027",
+      "text": "Python 3.12 fails in CI but passes locally on the same commit. Analyze the difference and explain it.",
+      "label": "should_boost",
+      "rationale": "CI/local divergence root-cause",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug",
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-028",
+      "text": "Monorepo vs polyrepo for six teams with shared release governance: analyze the trade-offs and recommend.",
+      "label": "should_boost",
+      "rationale": "repo topology trade-off analysis",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-029",
+      "text": "The queue grows unbounded under load spikes. Design a backpressure protocol with these constraints: no message loss, ordered per key.",
+      "label": "should_boost",
+      "rationale": "multi-constraint backpressure design",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-030",
+      "text": "Audit the deserialization path for gadget-chain risk and design the hardening steps.",
+      "label": "should_boost",
+      "rationale": "security audit of deserialization path",
+      "source": "synthetic",
+      "signals_expected": [
+        "security",
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-031",
+      "text": "hi",
+      "label": "should_release",
+      "rationale": "greeting",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-032",
+      "text": "thanks!",
+      "label": "should_release",
+      "rationale": "thanks",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-033",
+      "text": "ok",
+      "label": "should_release",
+      "rationale": "acknowledgement",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-034",
+      "text": "great work",
+      "label": "should_release",
+      "rationale": "praise",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-035",
+      "text": "list the files in src",
+      "label": "should_release",
+      "rationale": "single routine listing command",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-036",
+      "text": "continue",
+      "label": "should_release",
+      "rationale": "one-line continuation",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-037",
+      "text": "please continue",
+      "label": "should_release",
+      "rationale": "one-line continuation",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-038",
+      "text": "what time is it",
+      "label": "should_release",
+      "rationale": "simple lookup",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-039",
+      "text": "thanks, that worked",
+      "label": "should_release",
+      "rationale": "thanks",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-040",
+      "text": "yes",
+      "label": "should_release",
+      "rationale": "acknowledgement",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-041",
+      "text": "no",
+      "label": "should_release",
+      "rationale": "acknowledgement",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-042",
+      "text": "run the tests",
+      "label": "should_release",
+      "rationale": "single routine command",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-043",
+      "text": "show me the last commit message",
+      "label": "should_release",
+      "rationale": "simple git lookup",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-044",
+      "text": "what's the current branch",
+      "label": "should_release",
+      "rationale": "simple lookup",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-045",
+      "text": "copy this into a new file called notes.md",
+      "label": "should_release",
+      "rationale": "trivial file copy",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-046",
+      "text": "revert the last commit",
+      "label": "should_release",
+      "rationale": "single routine command",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-047",
+      "text": "good morning",
+      "label": "should_release",
+      "rationale": "greeting",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-048",
+      "text": "lol",
+      "label": "should_release",
+      "rationale": "reaction",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-049",
+      "text": "perfect",
+      "label": "should_release",
+      "rationale": "praise",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-050",
+      "text": "stop the background job",
+      "label": "should_release",
+      "rationale": "single routine command",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-051",
+      "text": "how many tests passed",
+      "label": "should_release",
+      "rationale": "simple lookup",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-052",
+      "text": "rename the variable to count",
+      "label": "should_release",
+      "rationale": "trivial rename",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-053",
+      "text": "add a newline at the end of the file",
+      "label": "should_release",
+      "rationale": "trivial edit",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-054",
+      "text": "ping",
+      "label": "should_release",
+      "rationale": "ping",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-055",
+      "text": "got it",
+      "label": "should_release",
+      "rationale": "acknowledgement",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-056",
+      "text": "next",
+      "label": "should_release",
+      "rationale": "continuation",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-057",
+      "text": "dismiss that question",
+      "label": "should_release",
+      "rationale": "trivial dismissal",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-058",
+      "text": "roll back the install",
+      "label": "should_release",
+      "rationale": "single routine command",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-059",
+      "text": "cheers",
+      "label": "should_release",
+      "rationale": "thanks",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-060",
+      "text": "done?",
+      "label": "should_release",
+      "rationale": "status question",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-061",
+      "text": "explain the config file settings in settings.yaml",
+      "label": "should_release",
+      "rationale": "config explanation lookup",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-062",
+      "text": "compare these two error logs and explain which is newer",
+      "label": "should_release",
+      "rationale": "trivial log comparison",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-063",
+      "text": "the build is failing with an error, can you fix it and explain why?",
+      "label": "should_boost",
+      "rationale": "build failure root-cause plus fix",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-064",
+      "text": "explain the retry policy in our docs and compare it with the config",
+      "label": "ambiguous",
+      "rationale": "routine docs-vs-config comparison",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-065",
+      "text": "can you refactor the variable names in index.js? it's just a chore",
+      "label": "should_release",
+      "rationale": "explicitly routine rename chore",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-066",
+      "text": "is this error expected? should I retry? here's the log",
+      "label": "ambiguous",
+      "rationale": "log judgment with mild analysis",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-067",
+      "text": "the tests are failing after your change, why?",
+      "label": "should_boost",
+      "rationale": "regression root-cause",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-068",
+      "text": "analyze why the cache hit rate dropped and compare to last week",
+      "label": "should_boost",
+      "rationale": "cache hit-rate root-cause analysis",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis",
+        "debug"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-069",
+      "text": "what changed in the last merge? explain the conflicts",
+      "label": "ambiguous",
+      "rationale": "merge summary and conflict explanation",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-070",
+      "text": "fix the typo in README.md",
+      "label": "should_release",
+      "rationale": "trivial typo fix",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-071",
+      "text": "why is the terminal rendering colors wrong? is it my profile or the app? explain",
+      "label": "ambiguous",
+      "rationale": "environment-vs-app diagnosis",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-072",
+      "text": "update package.json dependencies and note why each changed",
+      "label": "ambiguous",
+      "rationale": "routine update with a dash of explanation",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-073",
+      "text": "summarize today's changes, compare with yesterday, and explain what looks risky",
+      "label": "ambiguous",
+      "rationale": "summarize and compare with light risk judgment",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-074",
+      "text": "how do I run just the failing test, and why does it fail?",
+      "label": "should_boost",
+      "rationale": "asks for root-cause diagnosis of the failure",
+      "source": "synthetic",
+      "signals_expected": [
+        "debug"
+      ],
+      "labeledBy": "blind-adjudication",
+      "adjudication": {
+        "passA": "should_boost",
+        "passB": "ambiguous",
+        "final": "should_boost",
+        "by": "blind-adjudication-pass"
+      }
+    },
+    {
+      "id": "p-075",
+      "text": "the screenshot in the docs looks broken - why, and fix docs/ui.md",
+      "label": "ambiguous",
+      "rationale": "small doc diagnosis and fix",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-076",
+      "text": "check header.css against the design system",
+      "label": "ambiguous",
+      "rationale": "routine style review against a standard",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-077",
+      "text": "is the migration script safe to run twice? what if it fails midway?",
+      "label": "ambiguous",
+      "rationale": "idempotency and failure analysis, moderate depth",
+      "source": "synthetic",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-078",
+      "text": "explain the error codes returned by the api",
+      "label": "should_release",
+      "rationale": "simple API docs lookup",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-079",
+      "text": "review my last commit: is the message good, and compare it to the convention?",
+      "label": "ambiguous",
+      "rationale": "light commit message review",
+      "source": "synthetic",
+      "signals_expected": [
+        "analysis"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-080",
+      "text": "why does prettier keep changing quotes in app.ts?",
+      "label": "ambiguous",
+      "rationale": "mild tooling behavior explanation",
+      "source": "synthetic",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-081",
+      "text": "can we build new plugin for xiaomi mimio and Deepseek harness to make them more powerful reasonaing thinking enhance the mmm",
+      "label": "should_boost",
+      "rationale": "plugin design/build request needs architecture and planning",
+      "source": "session-anon",
+      "signals_expected": [
+        "design"
+      ],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-082",
+      "text": "what do you think give me your thoughts",
+      "label": "should_release",
+      "rationale": "vague request for thoughts with no problem to analyze",
+      "source": "session-anon",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-083",
+      "text": "go",
+      "label": "should_release",
+      "rationale": "single-word go-ahead",
+      "source": "session-anon",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-084",
+      "text": "go building now",
+      "label": "should_release",
+      "rationale": "short go-ahead to start building",
+      "source": "session-anon",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-085",
+      "text": "so what are you doing now",
+      "label": "should_release",
+      "rationale": "status-check question, simple lookup",
+      "source": "session-anon",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-086",
+      "text": "that what you mean dont apply anything now okay",
+      "label": "should_release",
+      "rationale": "acknowledgement/instruction not to apply changes",
+      "source": "session-anon",
+      "signals_expected": [],
+      "labeledBy": "dual-blind-agreed"
+    },
+    {
+      "id": "p-087",
+      "text": "dont apply anything now so we start with enhance mimo thinking",
+      "label": "should_release",
+      "rationale": "pure coordination directive, no analysis",
+      "source": "session-anon",
+      "signals_expected": [],
+      "labeledBy": "blind-adjudication",
+      "adjudication": {
+        "passA": "ambiguous",
+        "passB": "should_release",
+        "final": "should_release",
+        "by": "blind-adjudication-pass"
+      }
+    }
+  ],
+  "sequences": [
+    {
+      "id": "seq-boost-idempotent",
+      "initial": {
+        "boosted": false,
+        "effort": "low",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "inbox",
+          "exampleId": "p-001",
+          "advanceMs": 0
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-002",
+          "advanceMs": 0
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ],
+        [
+          "none"
+        ]
+      ]
+    },
+    {
+      "id": "seq-ttl-keeps",
+      "initial": {
+        "boosted": false,
+        "effort": "low",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "inbox",
+          "exampleId": "p-001",
+          "advanceMs": 0
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-031",
+          "advanceMs": 60000
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ],
+        [
+          "none"
+        ]
+      ]
+    },
+    {
+      "id": "seq-ttl-releases",
+      "initial": {
+        "boosted": false,
+        "effort": "low",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "inbox",
+          "exampleId": "p-001",
+          "advanceMs": 0
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-031",
+          "advanceMs": 1800001
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ],
+        [
+          "restore"
+        ]
+      ]
+    },
+    {
+      "id": "seq-midband-holds",
+      "initial": {
+        "boosted": false,
+        "effort": "low",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "inbox",
+          "exampleId": "p-001",
+          "advanceMs": 0
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-064",
+          "advanceMs": 1800001
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ],
+        [
+          "none"
+        ]
+      ]
+    },
+    {
+      "id": "seq-adapter-default",
+      "initial": {
+        "boosted": false,
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "inbox",
+          "exampleId": "p-001",
+          "advanceMs": 0
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-031",
+          "advanceMs": 1800001
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ],
+        [
+          "restore"
+        ]
+      ]
+    },
+    {
+      "id": "seq-work-reassert",
+      "initial": {
+        "boosted": true,
+        "effort": "off",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "tool",
+          "toolClass": "work",
+          "effortOverride": "off",
+          "advanceMs": 1000
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ]
+      ]
+    },
+    {
+      "id": "seq-discovery-quiet",
+      "initial": {
+        "boosted": true,
+        "effort": "off",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "tool",
+          "toolClass": "discovery",
+          "effortOverride": "off",
+          "advanceMs": 1000
+        }
+      ],
+      "expect": [
+        [
+          "none"
+        ]
+      ]
+    },
+    {
+      "id": "seq-model-change-forget",
+      "initial": {
+        "boosted": false,
+        "effort": "low",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "inbox",
+          "exampleId": "p-001",
+          "advanceMs": 0
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-031",
+          "advanceMs": 1800001,
+          "modelOverride": "mimo-v2.6-pro"
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ],
+        [
+          "none"
+        ]
+      ]
+    },
+    {
+      "id": "seq-model-change-quiet",
+      "initial": {
+        "boosted": false,
+        "effort": "low",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "inbox",
+          "exampleId": "p-001",
+          "advanceMs": 0
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-031",
+          "advanceMs": 1800001,
+          "modelOverride": "mimo-v2.6-pro"
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-003",
+          "advanceMs": 1000
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ],
+        [
+          "none"
+        ],
+        [
+          "none"
+        ]
+      ]
+    },
+    {
+      "id": "seq-release-then-reboost",
+      "initial": {
+        "boosted": false,
+        "effort": "low",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "inbox",
+          "exampleId": "p-001",
+          "advanceMs": 0
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-031",
+          "advanceMs": 1800001
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-005",
+          "advanceMs": 1000
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ],
+        [
+          "restore"
+        ],
+        [
+          "boost"
+        ]
+      ]
+    },
+    {
+      "id": "seq-release-then-stays-quiet",
+      "initial": {
+        "boosted": false,
+        "effort": "low",
+        "model": "mimo-v2.6-flash"
+      },
+      "steps": [
+        {
+          "type": "inbox",
+          "exampleId": "p-001",
+          "advanceMs": 0
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-031",
+          "advanceMs": 1800001
+        },
+        {
+          "type": "inbox",
+          "exampleId": "p-047",
+          "advanceMs": 1000
+        }
+      ],
+      "expect": [
+        [
+          "boost"
+        ],
+        [
+          "restore"
+        ],
+        [
+          "none"
+        ]
+      ]
+    }
+  ]
+}

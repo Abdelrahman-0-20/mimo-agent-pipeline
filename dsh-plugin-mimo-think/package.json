@@ -1,0 +1,42 @@
+{
+  "name": "dsh-plugin-mimo-think",
+  "version": "0.1.0",
+  "description": "Reasoning/thinking enhancer for Xiaomi MiMo on DeepSeek Harness: proactively raises reasoning effort when a hard prompt arrives, provides the mimo_think deep-reasoning tool (a read-only MiMo Pro child with a structured handoff), and reports metrics via mthink_status.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "mimo",
+    "reasoning",
+    "thinking",
+    "reasoning-effort",
+    "deep-reasoning",
+    "llm-ops"
+  ],
+  "exports": {
+    ".": "./src/index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "src",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg"
+  ],
+  "icon": "./icon.svg",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

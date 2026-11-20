@@ -1,0 +1,52 @@
+# mimo-agent-pipeline — dsh-plugin-mimo-think bundle patch.
+# Plain values only: model ids, thresholds, and effort levels — never secrets.
+- insert:
+    - id: mimo-think
+      name: dsh-plugin-mimo-think
+      config:
+        # Deep-reasoning child: the mimo_think tool spawns this tier.
+        thinkModel: mimo-v2.6-pro
+        thinkReasoningEffort: high
+        # Proactive boost: incoming prompts scoring >= boostThreshold raise the
+        # session's reasoning effort; a prompt scoring <= releaseThreshold after
+        # boostTtlMinutes releases it (hysteresis — release < boost).
+        boostEffort: high
+        boostThreshold: 4
+        releaseThreshold: 1
+        boostTtlMinutes: 30
+        boostPresets: main
+        statePath: mimo-think-state.json
+        stateTtlHours: 72
+        thinkTimeoutMs: 600000
+        thinkRetries: 1
+        thinkReadOnly: true
+
+    # --- the thinker role (read-only reasoning child) ------------------
+    # Mirrors the relay presets: a preset declares its own filesystem tools,
+    # so the child gets read-only grounding without a shell or writers.
+    - id: preset-thinker
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: thinker
+        name: Thinker
+        description: Read-only deep-reasoning pass on MiMo Pro — grounds in files, returns a structured verdict.
+        order: 41
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >-
+                You are the THINKER: a read-only deep-reasoning analyst.
+                Think step by step, weigh alternatives and risks, ground your
+                reasoning in files when they help, and answer with a direct
+                recommendation. Never edit files and never run commands.
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              write: false
+              edit: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false

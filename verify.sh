@@ -30,6 +30,7 @@ check "serverName: playwright" "MCP playwright server"
 check "mimo-escalator"         "MiMo auto-escalation plugin (Flash->Pro, 2 strikes)"
 check "mimo-relay"             "Multi-agent relay (Planner->Builder->Verifier)"
 check "serverName: context7"   "context7 live-docs connector"
+check "mimo-think"           "MiMo thinking enhancer (prompt boost + mimo_think)"
 
 echo "----"
 echo "$pass passed, $failed failed"

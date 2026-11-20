@@ -25,6 +25,7 @@ jobs:
           npx -y js-yaml@5.5.0 config/settings.yaml.example > /dev/null && echo "settings template OK"
           npx -y js-yaml@5.5.0 dsh-plugin-mimo-escalator/cordis.patch.yml > /dev/null && echo "escalator patch OK"
           npx -y js-yaml@5.5.0 <(sed 's/!!js //g' dsh-plugin-mimo-relay/cordis.patch.yml) > /dev/null && echo "relay patch OK"
+          npx -y js-yaml@5.5.0 dsh-plugin-mimo-think/cordis.patch.yml > /dev/null && echo "think patch OK"
           npx -y js-yaml@5.5.0 <(sed 's/!!js //g' benchmark/model-overlay.yml) > /dev/null && echo "benchmark overlay OK"
 
       - name: Secret scan
@@ -64,6 +65,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # eval gate: golden-set append-only check needs the base branch
 
       - uses: actions/setup-node@v4
         with:
@@ -76,3 +79,22 @@ jobs:
       - name: node --test (relay bundle)
         run: npm test
         working-directory: dsh-plugin-mimo-relay
+
+      - name: node --test (think bundle)
+        run: npm test
+        working-directory: dsh-plugin-mimo-think
+
+      - name: eval gate (mimo-think scorer)
+        run: node dsh-plugin-mimo-think/eval/run.mjs --json > eval-artifact.json
+
+      - name: upload eval artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mimo-think-eval
+          path: eval-artifact.json
+          if-no-files-found: ignore
+
+      - name: golden set append-only (vs base branch)
+        if: github.event_name == 'pull_request'
+        run: node dsh-plugin-mimo-think/eval/run.mjs --append-only-ref "origin/${{ github.base_ref }}"

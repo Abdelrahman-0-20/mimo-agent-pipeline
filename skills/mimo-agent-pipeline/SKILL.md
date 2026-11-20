@@ -1,22 +1,24 @@
 ---
 name: 'mimo-agent-pipeline'
-description: 'Run and recover the mimo-agent-pipeline in DeepSeek Harness: mimo_relay (Planner→Builder→Verifier), mescal_status (escalation/effort metrics), the auto-escalator rules, verification gates, and the continuation pattern for failed runs.'
-whenToUse: 'A task involves mimo_relay or mescal_status, an escalation/effort notice appears, or the working repo contains dsh-plugin-mimo-escalator / dsh-plugin-mimo-relay.'
+description: 'Run and recover the mimo-agent-pipeline in DeepSeek Harness: mimo_relay (Planner→Builder→Verifier), mimo_think (deep-reasoning pass), mescal_status/mthink_status (escalation and thinking metrics), the auto-escalator rules, verification gates, and the continuation pattern for failed runs.'
+whenToUse: 'A task involves mimo_relay or mescal_status, an escalation/effort notice appears, or the working repo contains dsh-plugin-mimo-escalator / dsh-plugin-mimo-relay / dsh-plugin-mimo-think.'
 ---
 
 # mimo-agent-pipeline
 
-You are working inside (or with) an autonomous engineering pipeline: a cheap-by-default MiMo model router with automatic escalation, a three-role relay, and verification gates that refuse to say "done" until they exit 0.
+You are working inside (or with) an autonomous engineering pipeline: a cheap-by-default MiMo model router with automatic escalation, a predictive thinking boost, a three-role relay, and verification gates that refuse to say "done" until they exit 0.
 
-## The two tools
+## The three tools
 
 - **`mimo_relay({task})`** runs one Planner → Builder → Verifier cycle in the current working directory. Returns `{ok, phase, reason, report}`; `ok: true` means the *independent verifier* passed (`report.verify.defects: []`). A plan-only read task still runs all three phases.
 - **`mescal_status()`** returns this session's escalation state, per-role persisted metrics (rounds, transitions, effort-toggle token samples), and `diagnostics.lastSkip` — **why the most recent tool result was not counted** as a verification round.
+- **`mimo_think({question, context?, focus?})`** runs one deep-reasoning pass: a read-only `mimo-v2.6-pro` thinker at `high` effort returns `{ok, reason, result: {analysis, answer, confidence, risks}, attempts, model, durationMs}`. Use it before hard decisions (design, root cause, trade-offs). `mthink_status()` reports the boost state and think metrics.
 
 ## Automatic behavior (no action needed)
 
 - **Tier escalator:** 2 consecutive failed verification rounds → `mimo-v2.6-pro` (high reasoning); 2 consecutive passes → back to `mimo-v2.6-flash`. State is per `<workspace>:<role>` in `mimo-escalator-state.json` (72 h TTL) — a builder's failures never escalate the planner.
 - **Effort policy:** 3+ consecutive read-only tools (read/grep/docs lookups) → `reasoningEffort: off`; the first work command (bash/edit/write) restores the saved effort immediately. Samples with cache-read tokens are recorded for measurement.
+- **Thinking boost (predictive):** every incoming prompt is scored; a score ≥ 4 (design/debug/analysis/security/code signals + length) raises `reasoningEffort` to `high` until a trivial prompt (≤ 1) arrives 30 minutes after the last hard one. Work tool results re-assert an active boost; discovery reads never do, so effort still goes `off` during read streaks. The boost never switches models and never overrides a manual `/model`.
 
 ## Critical: how verification rounds count
 

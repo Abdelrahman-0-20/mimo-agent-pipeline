@@ -12,6 +12,9 @@ node_modules/
 
 # escalator runtime state
 mimo-escalator-state.json
+
+# think enhancer runtime state
+mimo-think-state.json
 *.tmp
 
 # relay demo artifacts

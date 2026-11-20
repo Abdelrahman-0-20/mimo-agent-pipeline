@@ -1,0 +1,36 @@
+{
+  "version": "provisional-v1",
+  "units": "RCU (relative cost units, dimensionless, per example)",
+  "weights": {
+    "missBoost": 10,
+    "wrongRelease": 12,
+    "falseBoost": 2,
+    "stuckBoost": 1,
+    "ambiguousBoost": 1,
+    "ambiguousMiss": 1,
+    "ambiguousHold": 0
+  },
+  "asymmetryFloor": [
+    "wrongRelease",
+    "missBoost",
+    "falseBoost",
+    "ambiguousBoost"
+  ],
+  "delta": 0.05,
+  "sensitivityEnvelopes": [
+    0.5,
+    2
+  ],
+  "provenance": {
+    "note": "PROVISIONAL - magnitudes are honest guesses with recorded provenance; the enforced claim is the asymmetry order, not the exact numbers.",
+    "anchors": [
+      "missBoost: the reactive path needs 2 failed verification rounds to escalate (mimo-escalator threshold=2); each round is a full test-run turn. Plus unmeasured quality risk on the answer.",
+      "falseBoost: upper-bound proxy from benchmark/results.json (2026-11-17): Pro output 795 avg vs Flash 237 avg (3.4x) on identical tasks.",
+      "Effort-level deltas are NOT measurable yet: every mimo-escalator-state.json effort sample has reasoningTokens=null (tokenMeter never captured them)."
+    ],
+    "reDerivationTriggers": [
+      "A benchmark iteration measuring the same model at effort low vs high on identical tasks (reasoning tokens become real).",
+      "Enough mthink_status / escalator effort samples accumulate with baselineKind=usage carrying reasoningTokens."
+    ]
+  }
+}
