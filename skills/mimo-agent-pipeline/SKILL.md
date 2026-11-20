@@ -20,6 +20,15 @@ You are working inside (or with) an autonomous engineering pipeline: a cheap-by-
 - **Effort policy:** 3+ consecutive read-only tools (read/grep/docs lookups) → `reasoningEffort: off`; the first work command (bash/edit/write) restores the saved effort immediately. Samples with cache-read tokens are recorded for measurement.
 - **Thinking boost (predictive):** every incoming prompt is scored; a score ≥ 4 (design/debug/analysis/security/code signals + length) raises `reasoningEffort` to `high` until a trivial prompt (≤ 1) arrives 30 minutes after the last hard one. Work tool results re-assert an active boost; discovery reads never do, so effort still goes `off` during read streaks. The boost never switches models and never overrides a manual `/model`.
 
+## Eval gate (the scorer is measured, not guessed)
+
+The think-boost thresholds are CI-enforced by `node eval/run.mjs` (exit 0 pass · 1 regression/stale/violation · 2 infra fail-closed):
+
+- **Never tune thresholds or patterns directly.** Changing `cordis.patch.yml` thresholds, `eval/costs.json` weights, `eval/golden_set.json`, or `src/score.js`/`src/boost.js` makes the baseline stale → exit 1 until you re-record: `node eval/run.mjs --record --rationale "<why>"` — δ-guarded (cost over previously-known example ids may not regress >5%; removals refused).
+- **Golden set is append-only**: additions only, ids immutable, recompute `provenance.hash`; labels come from two independent blind passes (never the scorer, never outcomes) plus a blind adjudication pass; commit set + baseline together.
+- **Sequence violations are exact** (hysteresis / TTL / re-assert / model-forget invariants): zero tolerance, the gate names sequence and step.
+- Contract: `dsh-plugin-mimo-think/eval/DESIGN.md` · usage: `eval/README.md`.
+
 ## Critical: how verification rounds count
 
 A round counts only when the **final segment** of the bash command is the verification command itself — because that segment owns the exit code.
