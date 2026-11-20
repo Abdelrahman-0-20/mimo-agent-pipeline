@@ -1,0 +1,223 @@
+{
+  "meta": {
+    "label": "real usage — dsh headless --json over benchmark/model-overlay.yml; identical tasks per model; harness-default sampling",
+    "date": "2026-11-20T12:50:38.443Z",
+    "commit": "851624a",
+    "models": [
+      "mimo-v2.6-flash"
+    ],
+    "efforts": [
+      "low"
+    ],
+    "tasks": [
+      "crt-ball-bat",
+      "crt-widgets",
+      "crt-lily-pad",
+      "exact-string",
+      "arith-17x23",
+      "code-palindrome",
+      "rate-pipe-leak",
+      "count-coprime",
+      "mcc-compact",
+      "dsl-parse",
+      "code-topsort-lex",
+      "code-bankers-round",
+      "frac-exact-hearts"
+    ]
+  },
+  "results": [
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "crt-ball-bat",
+      "correct": true,
+      "wallMs": 7894,
+      "usage": {
+        "inputTokens": 6462,
+        "outputTokens": 24,
+        "totalTokens": 7510,
+        "cacheReadTokens": 1024
+      },
+      "answer": "$0.05"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "crt-widgets",
+      "correct": true,
+      "wallMs": 4174,
+      "usage": {
+        "inputTokens": 6458,
+        "outputTokens": 5,
+        "totalTokens": 7487,
+        "cacheReadTokens": 1024
+      },
+      "answer": "5"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "crt-lily-pad",
+      "correct": true,
+      "wallMs": 4185,
+      "usage": {
+        "inputTokens": 6455,
+        "outputTokens": 7,
+        "totalTokens": 7486,
+        "cacheReadTokens": 1024
+      },
+      "answer": "47"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "exact-string",
+      "correct": true,
+      "wallMs": 7801,
+      "usage": {
+        "inputTokens": 6427,
+        "outputTokens": 24,
+        "totalTokens": 7475,
+        "cacheReadTokens": 1024
+      },
+      "answer": "BANANA-42"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "arith-17x23",
+      "correct": true,
+      "wallMs": 11926,
+      "usage": {
+        "inputTokens": 6437,
+        "outputTokens": 75,
+        "totalTokens": 7536,
+        "cacheReadTokens": 1024
+      },
+      "answer": "391"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "code-palindrome",
+      "correct": true,
+      "wallMs": 13754,
+      "usage": {
+        "inputTokens": 6459,
+        "outputTokens": 80,
+        "totalTokens": 7563,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function isPalindrome(s) {\n  const t = s.toLowerCase();\n  for (let i = 0, j = t.length - 1; i < j; i++, j--) {\n    if (t[i] !== t[j]) return false;\n  }\n  return true;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "rate-pipe-leak",
+      "correct": true,
+      "wallMs": 14460,
+      "usage": {
+        "inputTokens": 6475,
+        "outputTokens": 68,
+        "totalTokens": 7567,
+        "cacheReadTokens": 1024
+      },
+      "answer": "8"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "count-coprime",
+      "correct": true,
+      "wallMs": 15345,
+      "usage": {
+        "inputTokens": 6449,
+        "outputTokens": 192,
+        "totalTokens": 7665,
+        "cacheReadTokens": 1024
+      },
+      "answer": "266"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "mcc-compact",
+      "correct": true,
+      "wallMs": 10790,
+      "usage": {
+        "inputTokens": 6544,
+        "outputTokens": 311,
+        "totalTokens": 7879,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function compact(events) {\n  const filtered = events.filter((e) => e.v !== null && e.v !== undefined);\n  const out = [];\n  for (const e of filtered) {\n    const last = out[out.length - 1];\n    if (last !== undefined && last.v === e.v) continue;\n    out.push({ t: e.t, v: e.v });\n  }\n  return out;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "dsl-parse",
+      "correct": true,
+      "wallMs": 95699,
+      "usage": {
+        "inputTokens": 9587,
+        "outputTokens": 3487,
+        "totalTokens": 21650,
+        "cacheReadTokens": 8576
+      },
+      "answer": "function parseAssignments(text) {\n  const out = {};\n  const set = (k, v) => Object.defineProperty(out, k, {\n    value: v, writable: true, enumerable: true, configurable: true\n  });\n  const stripComment = (line) => {\n    let inStr = false;\n    for (let i = 0; i < line.length; i++) {\n      const c = line[i];\n      if (inStr) {\n        if (c === '\\\\') i++;\n        else if (c === '\"') inStr = false;\n      } else if (c === '\"') inStr = true;\n      else if (c === '#') return line.slice(0, i);\n    }\n    return line;\n  };\n  for (const raw of String(text).split(/\\r\\n|\\n|\\r/)) {\n    const line = stripComment(raw).trim();\n    if (!line) continue;\n    const m = /^([A-Za-z0-9_]+)\\s*=\\s*(.*)$/.exec(line);\n    if (!m) continue;\n    const key = m[1];\n    const rest = m[2];\n    let value;\n    if (rest.charAt(0) === '\"') {\n      let v = '';\n      let i = 1;\n      for (; i < rest.length; i++) {\n        const c = rest[i];\n        if (c === '\\\\' && i + 1 < rest.length) {\n          const n = rest[++i];\n          if (n === 'n') v += '\\n';\n          else if (n === '\"') v += '\"';\n          else if (n === '\\\\') v += '\\\\';\n          else v += n;\n        } else if (c === '\"') {\n          break;\n        } else {\n          v += c;\n        }\n      }\n      value = v;\n    } else {\n      const b = /^[A-Za-z0-9_]+/.exec(rest);\n      if (!b) continue;\n      value = b[0];\n    }\n    set(key, value);\n  }\n  return out;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "code-topsort-lex",
+      "correct": true,
+      "wallMs": 22498,
+      "usage": {
+        "inputTokens": 7900,
+        "outputTokens": 650,
+        "totalTokens": 17062,
+        "cacheReadTokens": 8512
+      },
+      "answer": "function orderJobs(jobs) {\n  if (!Array.isArray(jobs) || jobs.length === 0) return [];\n\n  const idSet = new Set();\n  for (const job of jobs) {\n    if (!job || typeof job.id !== \"string\" || idSet.has(job.id)) return null;\n    idSet.add(job.id);\n  }\n\n  const depsOf = new Map();\n  const dependents = new Map();\n  const remaining = new Map();\n\n  for (const job of jobs) {\n    const deps = Array.isArray(job.deps) ? job.deps : [];\n    const uniqueDeps = [...new Set(deps)];\n    for (const dep of uniqueDeps) {\n      if (!idSet.has(dep)) return null;\n    }\n    depsOf.set(job.id, uniqueDeps);\n    remaining.set(job.id, uniqueDeps.length);\n    if (!dependents.has(job.id)) dependents.set(job.id, []);\n    for (const dep of uniqueDeps) {\n      if (!dependents.has(dep)) dependents.set(dep, []);\n      dependents.get(dep).push(job.id);\n    }\n  }\n\n  const heap = [];\n  const push = (id) => {\n    heap.push(id);\n    let i = heap.length - 1;\n    while (i > 0) {\n      const parent = (i - 1) >> 1;\n      if (heap[parent] <= heap[i]) break;\n      [heap[parent], heap[i]] = [heap[i], heap[parent]];\n      i = parent;\n    }\n  };\n  const pop = () => {\n    const top = heap[0];\n    const last = heap.pop();\n    if (heap.length > 0) {\n      heap[0] = last;\n      let i = 0;\n      for (;;) {\n        const l = i * 2 + 1;\n        const r = l + 1;\n        let smallest = i;\n        if (l < heap.length && heap[l] < heap[smallest]) smallest = l;\n        if (r < heap.length && heap[r] < heap[smallest]) smallest = r;\n        if (smallest === i) break;\n        [heap[smallest], heap[i]] = [heap[i], heap[smallest]];\n        i = smallest;\n      }\n    }\n    return top;\n  };\n\n  for (const job of jobs) {\n    if (remaining.get(job.id) === 0) push(job.id);\n  }\n\n  const order = [];\n  while (heap.length > 0) {\n    const id = pop();\n    order.push(id);\n    for (const next of dependents.get(id) || []) {\n      const left = remaining.get(next) - 1;\n      remaining.set(next, left);\n      if (left === 0) push(next);\n    }\n  }\n\n  return order.length === jobs.length ? order : null;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "code-bankers-round",
+      "correct": true,
+      "wallMs": 17767,
+      "usage": {
+        "inputTokens": 6511,
+        "outputTokens": 448,
+        "totalTokens": 7983,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function roundHalfEven(x, digits) {\n  const factor = 10 ** digits;\n  const scaled = x * factor;\n  const floor = Math.floor(scaled);\n  const frac = scaled - floor;\n  let result;\n  if (frac > 0.5) {\n    result = floor + 1;\n  } else if (frac < 0.5) {\n    result = floor;\n  } else {\n    result = floor % 2 === 0 ? floor : floor + 1;\n  }\n  return result / factor;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "frac-exact-hearts",
+      "correct": true,
+      "wallMs": 5671,
+      "usage": {
+        "inputTokens": 6465,
+        "outputTokens": 50,
+        "totalTokens": 7539,
+        "cacheReadTokens": 1024
+      },
+      "answer": "1/17"
+    }
+  ],
+  "aggregate": {
+    "mimo-v2.6-flash @ low": {
+      "quality": "13/13",
+      "inputTokens": 88629,
+      "outputTokens": 5421,
+      "totalTokens": 122402,
+      "cacheReadTokens": 28352,
+      "avgWallMs": 17843,
+      "errors": 0
+    }
+  }
+}
