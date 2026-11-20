@@ -32,5 +32,12 @@
       "A benchmark iteration measuring the same model at effort low vs high on identical tasks (reasoning tokens become real).",
       "Enough mthink_status / escalator effort samples accumulate with baselineKind=usage carrying reasoningTokens."
     ]
+  },
+  "tierFactors": {
+    "status": "measured-provisional",
+    "mediumVsHigh": 0.84,
+    "basis": "benchmark/results-effort.json (2026-11-20): totalTokens medium 168641 vs high 200219 over 13 identical tasks on mimo-v2.6-flash; outputTokens 7986 vs 9443 (0.85)",
+    "caveat": "Measured on the benchmark suite (mostly easy tasks); the medium-vs-high gap may be larger on genuinely hard prompts. Diagnostic only - NOT used by the v1 gated metric.",
+    "reDerivationTrigger": "A harder effort sweep, or effort-level reasoningTokens becoming visible, re-derives this factor."
   }
 }

@@ -1,0 +1,803 @@
+{
+  "meta": {
+    "label": "real usage - dsh headless --json over benchmark/model-overlay.yml; SAME model (flash), effort swept off/low/medium/high via BENCH_EFFORTS; identical tasks per effort; harness-default sampling",
+    "date": "2026-11-20T13:07:24.252Z",
+    "commit": "398a61f",
+    "models": [
+      "mimo-v2.6-flash"
+    ],
+    "efforts": [
+      "off",
+      "low",
+      "medium",
+      "high"
+    ],
+    "tasks": [
+      "crt-ball-bat",
+      "crt-widgets",
+      "crt-lily-pad",
+      "exact-string",
+      "arith-17x23",
+      "code-palindrome",
+      "rate-pipe-leak",
+      "count-coprime",
+      "mcc-compact",
+      "dsl-parse",
+      "code-topsort-lex",
+      "code-bankers-round",
+      "frac-exact-hearts"
+    ],
+    "note": "effort A/B v0.5: overlay maps all four levels for both models (verified mapping from config/cordis.patch.yml.example). dsl-parse checkParse attached (was missing - hidden by perpetual timeouts). Failures = 180s timeouts (dsl-parse at off, code-bankers-round at medium/high), recorded as errors, consistent across efforts."
+  },
+  "results": [
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "crt-ball-bat",
+      "correct": true,
+      "wallMs": 14044,
+      "usage": {
+        "inputTokens": 6460,
+        "outputTokens": 39,
+        "totalTokens": 7523,
+        "cacheReadTokens": 1024
+      },
+      "answer": "$0.05"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "crt-widgets",
+      "correct": true,
+      "wallMs": 5629,
+      "usage": {
+        "inputTokens": 6458,
+        "outputTokens": 59,
+        "totalTokens": 7541,
+        "cacheReadTokens": 1024
+      },
+      "answer": "5"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "crt-lily-pad",
+      "correct": true,
+      "wallMs": 5485,
+      "usage": {
+        "inputTokens": 6458,
+        "outputTokens": 18,
+        "totalTokens": 7500,
+        "cacheReadTokens": 1024
+      },
+      "answer": "47"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "exact-string",
+      "correct": true,
+      "wallMs": 9847,
+      "usage": {
+        "inputTokens": 6431,
+        "outputTokens": 52,
+        "totalTokens": 7507,
+        "cacheReadTokens": 1024
+      },
+      "answer": "BANANA-42"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "arith-17x23",
+      "correct": true,
+      "wallMs": 7247,
+      "usage": {
+        "inputTokens": 6437,
+        "outputTokens": 18,
+        "totalTokens": 7479,
+        "cacheReadTokens": 1024
+      },
+      "answer": "391"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "code-palindrome",
+      "correct": true,
+      "wallMs": 20734,
+      "usage": {
+        "inputTokens": 6460,
+        "outputTokens": 81,
+        "totalTokens": 7565,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function isPalindrome(s) {\n  const t = s.toLowerCase();\n  let i = 0, j = t.length - 1;\n  while (i < j) {\n    if (t[i] !== t[j]) return false;\n    i++;\n    j--;\n  }\n  return true;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "rate-pipe-leak",
+      "correct": true,
+      "wallMs": 19803,
+      "usage": {
+        "inputTokens": 6478,
+        "outputTokens": 59,
+        "totalTokens": 7561,
+        "cacheReadTokens": 1024
+      },
+      "answer": "8"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "count-coprime",
+      "correct": true,
+      "wallMs": 14338,
+      "usage": {
+        "inputTokens": 6449,
+        "outputTokens": 364,
+        "totalTokens": 7837,
+        "cacheReadTokens": 1024
+      },
+      "answer": "266"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "mcc-compact",
+      "correct": true,
+      "wallMs": 32908,
+      "usage": {
+        "inputTokens": 7265,
+        "outputTokens": 738,
+        "totalTokens": 16579,
+        "cacheReadTokens": 8576
+      },
+      "answer": "function compact(events) {\n  const out = [];\n  for (const e of events) {\n    if (e == null || e.v === null || e.v === undefined) continue;\n    const last = out[out.length - 1];\n    if (last !== undefined && last.v === e.v) continue;\n    out.push({ t: e.t, v: e.v });\n  }\n  return out;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "dsl-parse",
+      "correct": false,
+      "wallMs": 180025,
+      "usage": {
+        "inputTokens": 11749,
+        "outputTokens": 5895,
+        "totalTokens": 26220,
+        "cacheReadTokens": 8576
+      },
+      "answer": "",
+      "error": "exit null: "
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "code-topsort-lex",
+      "correct": true,
+      "wallMs": 40550,
+      "usage": {
+        "inputTokens": 6518,
+        "outputTokens": 1036,
+        "totalTokens": 8578,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function orderJobs(jobs) {\n  if (!Array.isArray(jobs) || jobs.length === 0) return [];\n\n  const known = new Set();\n  for (const job of jobs) known.add(job.id);\n\n  const indegree = new Map();\n  const dependents = new Map();\n\n  for (const job of jobs) {\n    indegree.set(job.id, 0);\n    dependents.set(job.id, []);\n  }\n\n  for (const job of jobs) {\n    const seen = new Set();\n    for (const dep of job.deps) {\n      if (!known.has(dep)) return null;\n      if (seen.has(dep)) continue; // duplicate dep entry counts once\n      seen.add(dep);\n      indegree.set(job.id, indegree.get(job.id) + 1);\n      dependents.get(dep).push(job.id);\n    }\n  }\n\n  // Min-heap on ids (lexicographic comparison)\n  const heap = [];\n  const less = (a, b) => String(a) < String(b);\n  const push = (x) => {\n    heap.push(x);\n    let i = heap.length - 1;\n    while (i > 0) {\n      const p = (i - 1) >> 1;\n      if (!less(heap[i], heap[p])) break;\n      [heap[i], heap[p]] = [heap[p], heap[i]];\n      i = p;\n    }\n  };\n  const pop = () => {\n    const top = heap[0];\n    const last = heap.pop();\n    if (heap.length > 0) {\n      heap[0] = last;\n      let i = 0;\n      for (;;) {\n        const l = 2 * i + 1;\n        const r = l + 1;\n        let m = i;\n        if (l < heap.length && less(heap[l], heap[m])) m = l;\n        if (r < heap.length && less(heap[r], heap[m])) m = r;\n        if (m === i) break;\n        [heap[i], heap[m]] = [heap[m], heap[i]];\n        i = m;\n      }\n    }\n    return top;\n  };\n\n  for (const job of jobs) {\n    if (indegree.get(job.id) === 0) push(job.id);\n  }\n\n  const order = [];\n  while (heap.length > 0) {\n    const id = pop();\n    order.push(id);\n    for (const next of dependents.get(id)) {\n      const left = indegree.get(next) - 1;\n      indegree.set(next, left);\n      if (left === 0) push(next);\n    }\n  }\n\n  return order.length === jobs.length ? order : null;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "code-bankers-round",
+      "correct": true,
+      "wallMs": 55249,
+      "usage": {
+        "inputTokens": 7737,
+        "outputTokens": 1420,
+        "totalTokens": 17669,
+        "cacheReadTokens": 8512
+      },
+      "answer": "function roundHalfEven(x, digits) {\n  const f = Math.pow(10, digits);\n  const y = x * f;\n  const floor = Math.floor(y);\n  const frac = y - floor;\n  let r;\n  if (frac > 0.5) r = floor + 1;\n  else if (frac < 0.5) r = floor;\n  else r = (floor % 2 === 0) ? floor : floor + 1;\n  return r / f;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "off",
+      "task": "frac-exact-hearts",
+      "correct": true,
+      "wallMs": 18417,
+      "usage": {
+        "inputTokens": 6464,
+        "outputTokens": 47,
+        "totalTokens": 7535,
+        "cacheReadTokens": 1024
+      },
+      "answer": "1/17"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "crt-ball-bat",
+      "correct": true,
+      "wallMs": 7894,
+      "usage": {
+        "inputTokens": 6462,
+        "outputTokens": 24,
+        "totalTokens": 7510,
+        "cacheReadTokens": 1024
+      },
+      "answer": "$0.05"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "crt-widgets",
+      "correct": true,
+      "wallMs": 4174,
+      "usage": {
+        "inputTokens": 6458,
+        "outputTokens": 5,
+        "totalTokens": 7487,
+        "cacheReadTokens": 1024
+      },
+      "answer": "5"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "crt-lily-pad",
+      "correct": true,
+      "wallMs": 4185,
+      "usage": {
+        "inputTokens": 6455,
+        "outputTokens": 7,
+        "totalTokens": 7486,
+        "cacheReadTokens": 1024
+      },
+      "answer": "47"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "exact-string",
+      "correct": true,
+      "wallMs": 7801,
+      "usage": {
+        "inputTokens": 6427,
+        "outputTokens": 24,
+        "totalTokens": 7475,
+        "cacheReadTokens": 1024
+      },
+      "answer": "BANANA-42"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "arith-17x23",
+      "correct": true,
+      "wallMs": 11926,
+      "usage": {
+        "inputTokens": 6437,
+        "outputTokens": 75,
+        "totalTokens": 7536,
+        "cacheReadTokens": 1024
+      },
+      "answer": "391"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "code-palindrome",
+      "correct": true,
+      "wallMs": 13754,
+      "usage": {
+        "inputTokens": 6459,
+        "outputTokens": 80,
+        "totalTokens": 7563,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function isPalindrome(s) {\n  const t = s.toLowerCase();\n  for (let i = 0, j = t.length - 1; i < j; i++, j--) {\n    if (t[i] !== t[j]) return false;\n  }\n  return true;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "rate-pipe-leak",
+      "correct": true,
+      "wallMs": 14460,
+      "usage": {
+        "inputTokens": 6475,
+        "outputTokens": 68,
+        "totalTokens": 7567,
+        "cacheReadTokens": 1024
+      },
+      "answer": "8"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "count-coprime",
+      "correct": true,
+      "wallMs": 15345,
+      "usage": {
+        "inputTokens": 6449,
+        "outputTokens": 192,
+        "totalTokens": 7665,
+        "cacheReadTokens": 1024
+      },
+      "answer": "266"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "mcc-compact",
+      "correct": true,
+      "wallMs": 10790,
+      "usage": {
+        "inputTokens": 6544,
+        "outputTokens": 311,
+        "totalTokens": 7879,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function compact(events) {\n  const filtered = events.filter((e) => e.v !== null && e.v !== undefined);\n  const out = [];\n  for (const e of filtered) {\n    const last = out[out.length - 1];\n    if (last !== undefined && last.v === e.v) continue;\n    out.push({ t: e.t, v: e.v });\n  }\n  return out;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "dsl-parse",
+      "correct": true,
+      "wallMs": 95699,
+      "usage": {
+        "inputTokens": 9587,
+        "outputTokens": 3487,
+        "totalTokens": 21650,
+        "cacheReadTokens": 8576
+      },
+      "answer": "function parseAssignments(text) {\n  const out = {};\n  const set = (k, v) => Object.defineProperty(out, k, {\n    value: v, writable: true, enumerable: true, configurable: true\n  });\n  const stripComment = (line) => {\n    let inStr = false;\n    for (let i = 0; i < line.length; i++) {\n      const c = line[i];\n      if (inStr) {\n        if (c === '\\\\') i++;\n        else if (c === '\"') inStr = false;\n      } else if (c === '\"') inStr = true;\n      else if (c === '#') return line.slice(0, i);\n    }\n    return line;\n  };\n  for (const raw of String(text).split(/\\r\\n|\\n|\\r/)) {\n    const line = stripComment(raw).trim();\n    if (!line) continue;\n    const m = /^([A-Za-z0-9_]+)\\s*=\\s*(.*)$/.exec(line);\n    if (!m) continue;\n    const key = m[1];\n    const rest = m[2];\n    let value;\n    if (rest.charAt(0) === '\"') {\n      let v = '';\n      let i = 1;\n      for (; i < rest.length; i++) {\n        const c = rest[i];\n        if (c === '\\\\' && i + 1 < rest.length) {\n          const n = rest[++i];\n          if (n === 'n') v += '\\n';\n          else if (n === '\"') v += '\"';\n          else if (n === '\\\\') v += '\\\\';\n          else v += n;\n        } else if (c === '\"') {\n          break;\n        } else {\n          v += c;\n        }\n      }\n      value = v;\n    } else {\n      const b = /^[A-Za-z0-9_]+/.exec(rest);\n      if (!b) continue;\n      value = b[0];\n    }\n    set(key, value);\n  }\n  return out;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "code-topsort-lex",
+      "correct": true,
+      "wallMs": 22498,
+      "usage": {
+        "inputTokens": 7900,
+        "outputTokens": 650,
+        "totalTokens": 17062,
+        "cacheReadTokens": 8512
+      },
+      "answer": "function orderJobs(jobs) {\n  if (!Array.isArray(jobs) || jobs.length === 0) return [];\n\n  const idSet = new Set();\n  for (const job of jobs) {\n    if (!job || typeof job.id !== \"string\" || idSet.has(job.id)) return null;\n    idSet.add(job.id);\n  }\n\n  const depsOf = new Map();\n  const dependents = new Map();\n  const remaining = new Map();\n\n  for (const job of jobs) {\n    const deps = Array.isArray(job.deps) ? job.deps : [];\n    const uniqueDeps = [...new Set(deps)];\n    for (const dep of uniqueDeps) {\n      if (!idSet.has(dep)) return null;\n    }\n    depsOf.set(job.id, uniqueDeps);\n    remaining.set(job.id, uniqueDeps.length);\n    if (!dependents.has(job.id)) dependents.set(job.id, []);\n    for (const dep of uniqueDeps) {\n      if (!dependents.has(dep)) dependents.set(dep, []);\n      dependents.get(dep).push(job.id);\n    }\n  }\n\n  const heap = [];\n  const push = (id) => {\n    heap.push(id);\n    let i = heap.length - 1;\n    while (i > 0) {\n      const parent = (i - 1) >> 1;\n      if (heap[parent] <= heap[i]) break;\n      [heap[parent], heap[i]] = [heap[i], heap[parent]];\n      i = parent;\n    }\n  };\n  const pop = () => {\n    const top = heap[0];\n    const last = heap.pop();\n    if (heap.length > 0) {\n      heap[0] = last;\n      let i = 0;\n      for (;;) {\n        const l = i * 2 + 1;\n        const r = l + 1;\n        let smallest = i;\n        if (l < heap.length && heap[l] < heap[smallest]) smallest = l;\n        if (r < heap.length && heap[r] < heap[smallest]) smallest = r;\n        if (smallest === i) break;\n        [heap[smallest], heap[i]] = [heap[i], heap[smallest]];\n        i = smallest;\n      }\n    }\n    return top;\n  };\n\n  for (const job of jobs) {\n    if (remaining.get(job.id) === 0) push(job.id);\n  }\n\n  const order = [];\n  while (heap.length > 0) {\n    const id = pop();\n    order.push(id);\n    for (const next of dependents.get(id) || []) {\n      const left = remaining.get(next) - 1;\n      remaining.set(next, left);\n      if (left === 0) push(next);\n    }\n  }\n\n  return order.length === jobs.length ? order : null;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "code-bankers-round",
+      "correct": true,
+      "wallMs": 17767,
+      "usage": {
+        "inputTokens": 6511,
+        "outputTokens": 448,
+        "totalTokens": 7983,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function roundHalfEven(x, digits) {\n  const factor = 10 ** digits;\n  const scaled = x * factor;\n  const floor = Math.floor(scaled);\n  const frac = scaled - floor;\n  let result;\n  if (frac > 0.5) {\n    result = floor + 1;\n  } else if (frac < 0.5) {\n    result = floor;\n  } else {\n    result = floor % 2 === 0 ? floor : floor + 1;\n  }\n  return result / factor;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "low",
+      "task": "frac-exact-hearts",
+      "correct": true,
+      "wallMs": 5671,
+      "usage": {
+        "inputTokens": 6465,
+        "outputTokens": 50,
+        "totalTokens": 7539,
+        "cacheReadTokens": 1024
+      },
+      "answer": "1/17"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "crt-ball-bat",
+      "correct": true,
+      "wallMs": 4826,
+      "usage": {
+        "inputTokens": 6456,
+        "outputTokens": 26,
+        "totalTokens": 7506,
+        "cacheReadTokens": 1024
+      },
+      "answer": "$0.05"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "crt-widgets",
+      "correct": true,
+      "wallMs": 5316,
+      "usage": {
+        "inputTokens": 6459,
+        "outputTokens": 63,
+        "totalTokens": 7546,
+        "cacheReadTokens": 1024
+      },
+      "answer": "5"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "crt-lily-pad",
+      "correct": true,
+      "wallMs": 5372,
+      "usage": {
+        "inputTokens": 6459,
+        "outputTokens": 7,
+        "totalTokens": 7490,
+        "cacheReadTokens": 1024
+      },
+      "answer": "47"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "exact-string",
+      "correct": true,
+      "wallMs": 4986,
+      "usage": {
+        "inputTokens": 6430,
+        "outputTokens": 24,
+        "totalTokens": 7478,
+        "cacheReadTokens": 1024
+      },
+      "answer": "BANANA-42"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "arith-17x23",
+      "correct": true,
+      "wallMs": 7743,
+      "usage": {
+        "inputTokens": 6436,
+        "outputTokens": 17,
+        "totalTokens": 7477,
+        "cacheReadTokens": 1024
+      },
+      "answer": "391"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "code-palindrome",
+      "correct": true,
+      "wallMs": 5820,
+      "usage": {
+        "inputTokens": 6458,
+        "outputTokens": 106,
+        "totalTokens": 7588,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function isPalindrome(s) {\n  const t = s.toLowerCase();\n  let i = 0;\n  let j = t.length - 1;\n  while (i < j) {\n    if (t[i] !== t[j]) return false;\n    i++;\n    j--;\n  }\n  return true;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "rate-pipe-leak",
+      "correct": true,
+      "wallMs": 4853,
+      "usage": {
+        "inputTokens": 6482,
+        "outputTokens": 56,
+        "totalTokens": 7562,
+        "cacheReadTokens": 1024
+      },
+      "answer": "8"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "count-coprime",
+      "correct": true,
+      "wallMs": 8108,
+      "usage": {
+        "inputTokens": 6447,
+        "outputTokens": 211,
+        "totalTokens": 7682,
+        "cacheReadTokens": 1024
+      },
+      "answer": "266"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "mcc-compact",
+      "correct": true,
+      "wallMs": 16633,
+      "usage": {
+        "inputTokens": 6549,
+        "outputTokens": 294,
+        "totalTokens": 7867,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function compact(events) {\n  const out = [];\n  for (const e of events) {\n    if (e.v === null || e.v === undefined) continue;\n    if (out.length > 0 && out[out.length - 1].v === e.v) continue;\n    out.push({ t: e.t, v: e.v });\n  }\n  return out;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "dsl-parse",
+      "correct": true,
+      "wallMs": 133079,
+      "usage": {
+        "inputTokens": 10641,
+        "outputTokens": 4199,
+        "totalTokens": 65784,
+        "cacheReadTokens": 50944
+      },
+      "answer": "function parseAssignments(text) {\n  const result = {};\n  const isWordChar = (c) => c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c === '_';\n  const isSpace = (c) => c === ' ' || c === '\\t';\n\n  const lines = String(text).split(/\\r\\n|[\\r\\n]/);\n\n  for (const line of lines) {\n    const n = line.length;\n    let i = 0;\n\n    while (i < n && isSpace(line[i])) i++;\n    if (i >= n || line[i] === '#') continue;\n\n    let j = i;\n    while (j < n && isWordChar(line[j])) j++;\n    if (j === i) continue;\n    const key = line.slice(i, j);\n    i = j;\n\n    while (i < n && isSpace(line[i])) i++;\n    if (i >= n || line[i] !== '=') continue;\n    i++;\n    while (i < n && isSpace(line[i])) i++;\n    if (i >= n || line[i] === '#') continue;\n\n    let value;\n    if (line[i] === '\"') {\n      i++;\n      let out = '';\n      let closed = false;\n      while (i < n) {\n        const c = line[i];\n        if (c === '\\\\' && i + 1 < n) {\n          const e = line[i + 1];\n          if (e === 'n') out += '\\n';\n          else if (e === '\"') out += '\"';\n          else if (e === '\\\\') out += '\\\\';\n          else out += e;\n          i += 2;\n        } else if (c === '\"') {\n          closed = true;\n          i++;\n          break;\n        } else {\n          out += c;\n          i++;\n        }\n      }\n      if (!closed) continue;\n      value = out;\n    } else if (isWordChar(line[i])) {\n      j = i;\n      while (j < n && isWordChar(line[j])) j++;\n      value = line.slice(i, j);\n    } else {\n      continue;\n    }\n\n    Object.defineProperty(result, key, {\n      value,\n      enumerable: true,\n      writable: true,\n      configurable: true,\n    });\n  }\n\n  return result;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "code-topsort-lex",
+      "correct": true,
+      "wallMs": 41063,
+      "usage": {
+        "inputTokens": 8145,
+        "outputTokens": 1804,
+        "totalTokens": 18461,
+        "cacheReadTokens": 8512
+      },
+      "answer": "function orderJobs(jobs) {\n  if (!Array.isArray(jobs) || jobs.length === 0) return [];\n  const ids = new Set();\n  for (const j of jobs) ids.add(j.id);\n  const indegree = new Map();\n  const dependents = new Map();\n  for (const j of jobs) {\n    if (!indegree.has(j.id)) {\n      indegree.set(j.id, 0);\n      dependents.set(j.id, []);\n    }\n  }\n  for (const j of jobs) {\n    const seen = new Set();\n    for (const d of (j.deps || [])) {\n      if (!ids.has(d)) return null;\n      if (seen.has(d)) continue;\n      seen.add(d);\n      dependents.get(d).push(j.id);\n      indegree.set(j.id, indegree.get(j.id) + 1);\n    }\n  }\n  const ready = [];\n  for (const [id, deg] of indegree) if (deg === 0) ready.push(id);\n  ready.sort();\n  const order = [];\n  while (ready.length) {\n    const id = ready.shift();\n    order.push(id);\n    for (const n of dependents.get(id)) {\n      const v = indegree.get(n) - 1;\n      indegree.set(n, v);\n      if (v === 0) {\n        ready.push(n);\n        ready.sort();\n      }\n    }\n  }\n  return order.length === jobs.length ? order : null;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "code-bankers-round",
+      "correct": false,
+      "wallMs": 180020,
+      "usage": {
+        "inputTokens": 6510,
+        "outputTokens": 1143,
+        "totalTokens": 8677,
+        "cacheReadTokens": 1024
+      },
+      "answer": "",
+      "error": "exit null: "
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "medium",
+      "task": "frac-exact-hearts",
+      "correct": true,
+      "wallMs": 7256,
+      "usage": {
+        "inputTokens": 6463,
+        "outputTokens": 36,
+        "totalTokens": 7523,
+        "cacheReadTokens": 1024
+      },
+      "answer": "1/17"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "crt-ball-bat",
+      "correct": true,
+      "wallMs": 4317,
+      "usage": {
+        "inputTokens": 6455,
+        "outputTokens": 28,
+        "totalTokens": 7507,
+        "cacheReadTokens": 1024
+      },
+      "answer": "0.05"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "crt-widgets",
+      "correct": true,
+      "wallMs": 8571,
+      "usage": {
+        "inputTokens": 6458,
+        "outputTokens": 52,
+        "totalTokens": 7534,
+        "cacheReadTokens": 1024
+      },
+      "answer": "5"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "crt-lily-pad",
+      "correct": true,
+      "wallMs": 4841,
+      "usage": {
+        "inputTokens": 6462,
+        "outputTokens": 43,
+        "totalTokens": 7529,
+        "cacheReadTokens": 1024
+      },
+      "answer": "47"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "exact-string",
+      "correct": true,
+      "wallMs": 5046,
+      "usage": {
+        "inputTokens": 6430,
+        "outputTokens": 26,
+        "totalTokens": 7480,
+        "cacheReadTokens": 1024
+      },
+      "answer": "BANANA-42"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "arith-17x23",
+      "correct": true,
+      "wallMs": 4332,
+      "usage": {
+        "inputTokens": 6435,
+        "outputTokens": 24,
+        "totalTokens": 7483,
+        "cacheReadTokens": 1024
+      },
+      "answer": "391"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "code-palindrome",
+      "correct": true,
+      "wallMs": 15308,
+      "usage": {
+        "inputTokens": 6457,
+        "outputTokens": 94,
+        "totalTokens": 7575,
+        "cacheReadTokens": 1024
+      },
+      "answer": "function isPalindrome(s) {\n  const normalized = s.toLowerCase();\n  let left = 0;\n  let right = normalized.length - 1;\n  while (left < right) {\n    if (normalized[left] !== normalized[right]) {\n      return false;\n    }\n    left += 1;\n    right -= 1;\n  }\n  return true;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "rate-pipe-leak",
+      "correct": true,
+      "wallMs": 5968,
+      "usage": {
+        "inputTokens": 6477,
+        "outputTokens": 56,
+        "totalTokens": 7557,
+        "cacheReadTokens": 1024
+      },
+      "answer": "8"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "count-coprime",
+      "correct": true,
+      "wallMs": 14078,
+      "usage": {
+        "inputTokens": 6449,
+        "outputTokens": 444,
+        "totalTokens": 7917,
+        "cacheReadTokens": 1024
+      },
+      "answer": "266"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "mcc-compact",
+      "correct": true,
+      "wallMs": 22410,
+      "usage": {
+        "inputTokens": 7031,
+        "outputTokens": 532,
+        "totalTokens": 16139,
+        "cacheReadTokens": 8576
+      },
+      "answer": "function compact(events) {\n  const filtered = events.filter((e) => e.v !== null && e.v !== undefined);\n  const out = [];\n  for (const e of filtered) {\n    const last = out[out.length - 1];\n    if (last !== undefined && last.v === e.v) continue;\n    out.push({ t: e.t, v: e.v });\n  }\n  return out;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "dsl-parse",
+      "correct": true,
+      "wallMs": 153784,
+      "usage": {
+        "inputTokens": 13319,
+        "outputTokens": 5522,
+        "totalTokens": 90009,
+        "cacheReadTokens": 71168
+      },
+      "answer": "function parseAssignments(text) {\n  const entries = new Map();\n  function stripComment(line) {\n    let inQuote = false;\n    for (let i = 0; i < line.length; i++) {\n      const ch = line[i];\n      if (inQuote) {\n        if (ch === \"\\\\\") { i++; continue; }\n        if (ch === '\"') inQuote = false;\n      } else if (ch === \"#\") {\n        return line.slice(0, i);\n      } else if (ch === '\"') {\n        inQuote = true;\n      }\n    }\n    return line;\n  }\n  const lines = String(text).split(/\\r\\n|\\r|\\n/);\n  for (const raw of lines) {\n    const line = stripComment(raw);\n    const m = /^\\s*([A-Za-z0-9_]+)\\s*=\\s*([\\s\\S]*?)\\s*$/.exec(line);\n    if (!m) continue;\n    const key = m[1];\n    const value = m[2];\n    let parsed = null;\n    if (value.startsWith('\"')) {\n      let i = 1, out = \"\", closed = false, bad = false;\n      while (i < value.length) {\n        const ch = value[i];\n        if (ch === \"\\\\\") {\n          const next = value[i + 1];\n          if (next === undefined) { bad = true; break; }\n          if (next === \"n\") out += \"\\n\";\n          else if (next === '\"') out += '\"';\n          else if (next === \"\\\\\") out += \"\\\\\";\n          else out += next;\n          i += 2;\n        } else if (ch === '\"') {\n          closed = true; i++; break;\n        } else {\n          out += ch; i++;\n        }\n      }\n      if (bad || !closed) continue;\n      if (value.slice(i).trim() !== \"\") continue;\n      parsed = out;\n    } else if (/^[A-Za-z0-9_]+$/.test(value)) {\n      parsed = value;\n    }\n    if (parsed === null) continue;\n    entries.set(key, parsed);\n  }\n  return Object.fromEntries(entries);\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "code-topsort-lex",
+      "correct": true,
+      "wallMs": 30320,
+      "usage": {
+        "inputTokens": 7329,
+        "outputTokens": 1108,
+        "totalTokens": 16949,
+        "cacheReadTokens": 8512
+      },
+      "answer": "function orderJobs(jobs) {\n  if (!Array.isArray(jobs) || jobs.length === 0) return [];\n  const byId = new Map();\n  for (const j of jobs) {\n    if (!j || j.id === undefined || byId.has(j.id)) return null;\n    byId.set(j.id, j);\n  }\n  const indeg = new Map();\n  const dependents = new Map();\n  for (const j of jobs) {\n    indeg.set(j.id, 0);\n    dependents.set(j.id, []);\n  }\n  const seen = new Set();\n  for (const j of jobs) {\n    for (const d of (j.deps || [])) {\n      if (!byId.has(d)) return null;\n      if (d === j.id) return null;\n      const key = j.id + '\\u0000' + d;\n      if (seen.has(key)) continue;\n      seen.add(key);\n      indeg.set(j.id, indeg.get(j.id) + 1);\n      dependents.get(d).push(j.id);\n    }\n  }\n  const ready = jobs.filter(j => indeg.get(j.id) === 0).map(j => j.id).sort();\n  const out = [];\n  while (ready.length) {\n    const id = ready.shift();\n    out.push(id);\n    for (const nxt of dependents.get(id)) {\n      indeg.set(nxt, indeg.get(nxt) - 1);\n      if (indeg.get(nxt) === 0) {\n        ready.push(nxt);\n        ready.sort();\n      }\n    }\n  }\n  return out.length === jobs.length ? out : null;\n}"
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "code-bankers-round",
+      "correct": false,
+      "wallMs": 180021,
+      "usage": {
+        "inputTokens": 6510,
+        "outputTokens": 1478,
+        "totalTokens": 9012,
+        "cacheReadTokens": 1024
+      },
+      "answer": "",
+      "error": "exit null: "
+    },
+    {
+      "model": "mimo-v2.6-flash",
+      "effort": "high",
+      "task": "frac-exact-hearts",
+      "correct": true,
+      "wallMs": 6464,
+      "usage": {
+        "inputTokens": 6468,
+        "outputTokens": 36,
+        "totalTokens": 7528,
+        "cacheReadTokens": 1024
+      },
+      "answer": "1/17"
+    }
+  ],
+  "aggregate": {
+    "mimo-v2.6-flash @ off": {
+      "quality": "12/13",
+      "inputTokens": 91364,
+      "outputTokens": 9826,
+      "totalTokens": 137094,
+      "cacheReadTokens": 35904,
+      "avgWallMs": 32637,
+      "errors": 1
+    },
+    "mimo-v2.6-flash @ low": {
+      "quality": "13/13",
+      "inputTokens": 88629,
+      "outputTokens": 5421,
+      "totalTokens": 122402,
+      "cacheReadTokens": 28352,
+      "avgWallMs": 17843,
+      "errors": 0
+    },
+    "mimo-v2.6-flash @ medium": {
+      "quality": "12/13",
+      "inputTokens": 89935,
+      "outputTokens": 7986,
+      "totalTokens": 168641,
+      "cacheReadTokens": 70720,
+      "avgWallMs": 32698,
+      "errors": 1
+    },
+    "mimo-v2.6-flash @ high": {
+      "quality": "12/13",
+      "inputTokens": 92280,
+      "outputTokens": 9443,
+      "totalTokens": 200219,
+      "cacheReadTokens": 98496,
+      "avgWallMs": 35035,
+      "errors": 1
+    }
+  }
+}

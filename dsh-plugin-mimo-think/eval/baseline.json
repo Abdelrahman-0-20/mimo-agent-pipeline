@@ -1,6 +1,6 @@
 {
-  "recordedAt": "2026-11-20T11:23:53.573Z",
-  "rationale": "initial freeze: 87 examples (35/41/11) labeled by two independent blind passes plus one blind adjudication pass; 11 label-derived sequences green; first measured meanCost for the shipped thresholds 4/1/30",
+  "recordedAt": "2026-11-20T13:09:00.990Z",
+  "rationale": "effort A/B landed (benchmark/results-effort.json): added measured-provisional tierFactor mediumVsHigh=0.84 for the Phase 3 diagnostic; v1 gated metric and all thresholds unchanged",
   "protocolVersion": "blind-dual-v1",
   "goldenSetHash": "sha256:8af300c6cc510d6658668676517eeaf21f1f4f9a71df5b898eaa2010ab476c31",
   "scorerFingerprint": "sha256:6eecf4640778ec63a6c0a5c9e1ed498220c78c9e36d1731ddcddafa9dff3770a",
