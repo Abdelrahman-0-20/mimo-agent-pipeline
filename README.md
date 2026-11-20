@@ -195,7 +195,10 @@ Four levers, each verified live:
 - **Standalone stdio MCP server** — [`dsh-plugin-mimo-escalator/mcp-server.mjs`](dsh-plugin-mimo-escalator/mcp-server.mjs): zero-dependency JSON-RPC over stdio exposing the *same* state machine and store as `mescal_status` and `mescal_record_round`, so Cursor / Claude Code / VS Code hooks can drive escalation decisions:
 
   ```bash
-  npm install -g dsh-plugin-mimo-escalator    # provides the `mimo-escalator-mcp` bin
+  # works today (clone + local install):
+  git clone https://github.com/Abdelrahman-0-20/mimo-agent-pipeline.git
+  (cd mimo-agent-pipeline/dsh-plugin-mimo-escalator && npm install -g .)
+  # once the npm publish lands: npm install -g dsh-plugin-mimo-escalator
   claude mcp add escalator -- mimo-escalator-mcp
   # or straight from this repo:
   claude mcp add escalator -- node /path/to/dsh-plugin-mimo-escalator/mcp-server.mjs
