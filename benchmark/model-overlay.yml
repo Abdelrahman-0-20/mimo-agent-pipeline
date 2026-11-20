@@ -7,6 +7,23 @@
     providers:
       xiaomi-token-plan-sgp:
         apiKeyEnv: XIAOMI_TOKEN_PLAN_SGP_API_KEY
+        # Effort A/B support: the live profile only maps the levels the
+        # pipeline uses (off/high); declare all four for BOTH models so the
+        # harness accepts off/low/medium/high identically across the sweep.
+        # Mapping copied from config/cordis.patch.yml.example (verified).
+        models:
+          - id: mimo-v2.6-flash
+            reasoningEfforts:
+              off: null
+              low: low
+              medium: medium
+              high: high
+          - id: mimo-v2.6-pro
+            reasoningEfforts:
+              off: null
+              low: low
+              medium: medium
+              high: high
 - id: agent-default-model
   config:
     provider: xiaomi-token-plan-sgp
