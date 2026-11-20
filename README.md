@@ -2,7 +2,7 @@
 
 > An end-to-end **autonomous engineering pipeline** for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): tiered **Xiaomi MiMo** routing with a self-written auto-escalation plugin, persistent MCP memory, independent code review, and deterministic verification gates.
 
-![version](https://img.shields.io/badge/version-v1.0.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![CI](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/actions/workflows/ci.yml/badge.svg)
+![version](https://img.shields.io/badge/version-v1.1.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![CI](https://github.com/Abdelrahman-0-20/mimo-agent-pipeline/actions/workflows/ci.yml/badge.svg)
 
 ## What you get
 
@@ -11,6 +11,7 @@
 - **Independent verification** — `/review` grades your diff with a *separate* agent; `AGENTS.md` forbids "done" until tests + linter + typechecker exit `0`.
 - **331 summonable experts** via the Agency Agents plugin.
 - **Measured, not assumed** — a real Flash-vs-Pro benchmark (raw data committed) plus CI that reproduces the entire pipeline on a clean machine.
+- **Two skills ship with it** — any fresh session starts already knowing how to run, recover, and *extend* the pipeline (`skills/mimo-agent-pipeline`, `skills/dsh-plugin-authoring`).
 
 ## Architecture
 
@@ -43,6 +44,8 @@ flowchart TD
 | [`dsh-plugin-mimo-escalator/`](dsh-plugin-mimo-escalator/) | **Original plugin (v0.3–v0.6)** — auto Flash↔Pro escalation with hysteresis, per-role `<workspace>:<role>` state keys, persistence, metrics, CI-status detection, thinking-off-on-discovery effort policy, standalone stdio MCP server (`mcp-server.mjs`) · `npm test` |
 | [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) | **Original plugin (v0.5/v0.6)** — `mimo_relay` tool: Planner→Builder→Verifier over the `spawn` backend with role presets, connector locks, schema-checked handoff, per-role tool scoping (builder 85 → 9 schemas) · `npm test` |
 | [`dsh-plugin-mimo-think/`](dsh-plugin-mimo-think/) | **Original plugin (v0.1)** — reasoning enhancer: prompt-scoring effort boost (hysteresis + TTL, re-asserts on work), `mimo_think` deep-reasoning child (Pro @ high, read-only, structured verdict), `mthink_status` metrics · `npm test` |
+| [`skills/mimo-agent-pipeline/`](skills/mimo-agent-pipeline/) | **Skill** — teaches any fresh session to run and recover the pipeline: `mimo_relay` / `mescal_status` / `mimo_think`, the escalator rules, the bare-command counting rule, continuation pattern, eval-gate rules |
+| [`skills/dsh-plugin-authoring/`](skills/dsh-plugin-authoring/) | **Skill** — the plugin-authoring manual: anatomy, config pattern, the6 verified extension points, agent presets, integration gate checklist,7 named failure modes |
 | [`benchmark/`](benchmark/) | **v0.4/v0.5 benchmark** — identical tasks via `dsh headless --json`; model A/B in `results.json`, **effort A/B** (off/low/medium/high) in `results-effort.json` |
 
 ## Quick start
@@ -173,7 +176,8 @@ PASS  MiMo auto-escalation plugin (Flash->Pro, 2 strikes)
 PASS  Multi-agent relay (Planner->Builder->Verifier)
 PASS  context7 live-docs connector
 PASS  MiMo thinking enhancer (prompt boost + mimo_think)
-11 passed, 0 failed
+PASS  cordis.patch.yml files parse (!!js stripped)
+12 passed, 0 failed
 ```
 
 ## Continuous integration
@@ -220,7 +224,18 @@ Four levers, each verified live:
   # optional: MIMO_ESCALATOR_STATE=... MIMO_ESCALATOR_THRESHOLD=2 MIMO_ESCALATOR_DEMOTE_THRESHOLD=2
   ```
 
-**Evidence:** 42 escalator + 20 relay tests (`node --test`, exit 0); `verify.sh` **10/10**; a live effort off/on cycle with persisted tokenMeter samples; a live relay re-run under scoping (plan → build `pass` → verifier `defects: []`, all locks released).
+**Evidence:** 42 escalator + 20 relay + 74 think tests (`node --test`, exit 0); `verify.sh` **11/11**; a live effort off/on cycle with persisted tokenMeter samples; a live relay re-run under scoping (plan → build `pass` → verifier `defects: []`, all locks released).
+
+## Thinking enhancer (v1.1, shipped)
+
+**`dsh-plugin-mimo-think`** — predictive reasoning effort on the *current* model. It never switches models (that stays the escalator's job) and never counts verification rounds (that stays the relay's).
+
+- **Prompt-scoring boost** — every incoming prompt is scored; a hard one (design / debug / analysis / security / code, score ≥ 4) raises `reasoningEffort` to `high` until a trivial prompt (≤ 1) arrives 30 minutes later (TTL). Work tool results re-assert an active boost; discovery reads never do, so it coexists with the escalator's thinking-off-on-discovery policy without thrashing — and a manual `/model` is never overridden.
+- **`mimo_think({question, context?, focus?})`** — one read-only deep-reasoning pass on `mimo-v2.6-pro` @ high, returning `{ ok, result: { analysis, answer, confidence, risks }, attempts, model, durationMs }`. Use it before hard decisions: design, root cause, trade-offs.
+- **`mthink_status()`** — boost state and think metrics for the session.
+- **Eval gate** — the scorer is measured, not guessed: `node dsh-plugin-mimo-think/eval/run.mjs` runs the golden set in CI. The golden set is **append-only**, thresholds are **never tuned directly** (a stale baseline exits 1), and sequence violations are zero-tolerance; pull requests run the `--append-only-ref` check.
+
+**Evidence:** 74 tests (`node --test`, exit 0); its own `verify.sh` PASS line (`MiMo thinking enhancer`); eval-gate artifact uploaded by CI.
 
 ## Roadmap
 
@@ -232,8 +247,9 @@ Four levers, each verified live:
 | **v0.4** | Metrics + persistence/TTL + CI-status detection + real-usage benchmark | done |
 | **v0.5** | Multi-agent relay (Planner→Builder→Verifier): per-role keys, connector locks | done |
 | **v0.6** | **Cost & reach** — thinking-off-on-discovery · role-scoped connector packs · `context7` live-docs connector (check #10) · standalone stdio MCP server for other editors | done |
-| **v0.7** | **Public launch** — final secret scan → repo goes public · demo GIF (memory recall + one relay run) · GitHub profile README + repo descriptions | pending |
-| **v1.0** | Case study: the pipeline builds a full MLOps project end-to-end via the relay · harder benchmark tasks | ✅ case study shipped (`breast-cancer-mlops`, [greenfield write-up](docs/case-study-greenfield.md)) · benchmark v2 pending |
+| **v0.7** | **Public launch** — final secret scan → repo goes public · demo GIF (memory recall + one relay run) + GitHub profile README + repo descriptions | done |
+| **v1.0** | Case study: the pipeline builds a full MLOps project end-to-end via the relay · harder benchmark tasks | ✅ case study shipped (`breast-cancer-mlops`, [greenfield write-up](docs/case-study-greenfield.md)) · benchmark v2/v3 shipped (`results-v2.json`, `results-v3.json`) |
+| **v1.1** | **`dsh-plugin-mimo-think`** — predictive effort boost + `mimo_think` deep-reasoning tool + CI-enforced eval gate · skills (`mimo-agent-pipeline`, `dsh-plugin-authoring`) · effort A/B benchmark · relay auto-recovery (quota cool-off + contract repair) · npm packaging (publish pending the 2FA step) | done |
 
 ### The plan after v0.5
 
