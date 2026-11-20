@@ -27,6 +27,7 @@ const OVERLAY = join(HERE, 'model-overlay.yml')
 const DSH_CLI = process.env.DSH_CLI || 'dsh'
 const MODELS = (process.env.BENCH_MODELS || 'mimo-v2.6-flash,mimo-v2.6-pro')
   .split(',').map(s => s.trim()).filter(Boolean)
+const EFFORTS = (process.env.BENCH_EFFORTS || '').split(',').map(s => s.trim()).filter(Boolean)
 const OUT = process.env.BENCH_OUT || join(HERE, 'results.json')
 const RUN_TIMEOUT_MS = 180_000
 /** Extract every number in an answer; a task passes when its expected value appears. */
@@ -213,19 +214,21 @@ const TASKS = [
 const ZERO = { inputTokens: 0, outputTokens: 0, totalTokens: 0, cacheReadTokens: 0 }
 
 /** One fresh headless run; resolves with parsed usage, answer, and verdict. */
-function runOnce(model, task) {
+function runOnce(model, task, effort = null) {
   return new Promise(resolve => {
     const start = Date.now()
     const child = spawn(
       DSH_CLI,
       ['headless', '--patch', OVERLAY, '--json', '--approval-policy', 'never', task.prompt],
-      { env: { ...process.env, BENCH_MODEL: model }, cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] },
+      { env: { ...process.env, BENCH_MODEL: model, BENCH_EFFORT: effort ?? '' }, cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], detached: true },
     )
     let out = ''
     let err = ''
     child.stdout.on('data', chunk => { out += chunk })
     child.stderr.on('data', chunk => { err += chunk })
-    const killer = setTimeout(() => child.kill('SIGKILL'), RUN_TIMEOUT_MS)
+    const killer = setTimeout(() => {
+      try { process.kill(-child.pid, 'SIGKILL') } catch { child.kill('SIGKILL') }
+    }, RUN_TIMEOUT_MS)
     child.on('close', code => {
       clearTimeout(killer)
       const events = out.split('\n').filter(Boolean)
@@ -244,6 +247,7 @@ function runOnce(model, task) {
       const completed = code === 0 && final?.reason?.kind === 'completed'
       resolve({
         model,
+        effort,
         task: task.id,
         correct: completed && task.check(answer),
         wallMs: Date.now() - start,
@@ -273,17 +277,22 @@ if (SELECTED.length === 0) {
 }
 
 const results = []
+const combos = []
 for (const model of MODELS) {
+  for (const effort of (EFFORTS.length > 0 ? EFFORTS : [null])) combos.push({ model, effort })
+}
+for (const { model, effort } of combos) {
   for (const task of SELECTED) {
-    process.stderr.write(`running ${model} × ${task.id} …\n`)
-    results.push(await runOnce(model, task))
+    process.stderr.write(`running ${model}${effort === null ? '' : ' @ ' + effort} × ${task.id} …\n`)
+    results.push(await runOnce(model, task, effort))
   }
 }
 
 const aggregate = {}
-for (const model of MODELS) {
-  const rows = results.filter(r => r.model === model)
-  aggregate[model] = {
+for (const { model, effort } of combos) {
+  const key = effort === null ? model : model + ' @ ' + effort
+  const rows = results.filter(r => r.model === model && (r.effort ?? null) === effort)
+  aggregate[key] = {
     quality: `${rows.filter(r => r.correct).length}/${rows.length}`,
     inputTokens: rows.reduce((s, r) => s + r.usage.inputTokens, 0),
     outputTokens: rows.reduce((s, r) => s + r.usage.outputTokens, 0),
@@ -300,6 +309,7 @@ const doc = {
     date: new Date().toISOString(),
     commit: commit(),
     models: MODELS,
+    ...(EFFORTS.length > 0 ? { efforts: EFFORTS } : {}),
     tasks: SELECTED.map(t => t.id),
   },
   results,
@@ -307,9 +317,8 @@ const doc = {
 }
 writeFileSync(OUT, `${JSON.stringify(doc, null, 2)}\n`)
 
-process.stdout.write(`\n| Model | Quality | Input tok | Output tok | Avg wall |\n|---|---|---|---|---|\n`)
-for (const model of MODELS) {
-  const a = aggregate[model]
-  process.stdout.write(`| ${model} | ${a.quality} | ${a.inputTokens} | ${a.outputTokens} | ${(a.avgWallMs / 1000).toFixed(1)}s |\n`)
+process.stdout.write(`\n| Run | Quality | Input tok | Output tok | Avg wall |\n|---|---|---|---|---|\n`)
+for (const [key, a] of Object.entries(aggregate)) {
+  process.stdout.write(`| ${key} | ${a.quality} | ${a.inputTokens} | ${a.outputTokens} | ${(a.avgWallMs / 1000).toFixed(1)}s |\n`)
 }
 process.stdout.write(`\nresults written to ${OUT}\n`)

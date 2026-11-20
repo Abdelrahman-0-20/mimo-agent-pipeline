@@ -11,6 +11,9 @@
   config:
     provider: xiaomi-token-plan-sgp
     model: !!js process.env.BENCH_MODEL || 'mimo-v2.6-flash'
+    # Effort A/B (benchmark/run.mjs BENCH_EFFORTS): unset -> adapter default,
+    # otherwise the harness effort id (off/low/medium/high) for every run.
+    reasoningEffort: !!js process.env.BENCH_EFFORT || undefined
 # The headless template disables credentials-local; the stored provider key
 # lives in the global credentials service (the web Models page writes it).
 - id: credentials
