@@ -43,7 +43,7 @@ flowchart TD
 | [`dsh-plugin-mimo-escalator/`](dsh-plugin-mimo-escalator/) | **Original plugin (v0.3–v0.6)** — auto Flash↔Pro escalation with hysteresis, per-role `<workspace>:<role>` state keys, persistence, metrics, CI-status detection, thinking-off-on-discovery effort policy, standalone stdio MCP server (`mcp-server.mjs`) · `npm test` |
 | [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) | **Original plugin (v0.5/v0.6)** — `mimo_relay` tool: Planner→Builder→Verifier over the `spawn` backend with role presets, connector locks, schema-checked handoff, per-role tool scoping (builder 85 → 9 schemas) · `npm test` |
 | [`dsh-plugin-mimo-think/`](dsh-plugin-mimo-think/) | **Original plugin (v0.1)** — reasoning enhancer: prompt-scoring effort boost (hysteresis + TTL, re-asserts on work), `mimo_think` deep-reasoning child (Pro @ high, read-only, structured verdict), `mthink_status` metrics · `npm test` |
-| [`benchmark/`](benchmark/) | **v0.4 benchmark** — identical tasks via `dsh headless --json`, real token usage in [`benchmark/results.json`](benchmark/results.json) |
+| [`benchmark/`](benchmark/) | **v0.4/v0.5 benchmark** — identical tasks via `dsh headless --json`; model A/B in `results.json`, **effort A/B** (off/low/medium/high) in `results-effort.json` |
 
 ## Quick start
 
@@ -137,12 +137,26 @@ Real usage captured **2026-11-17** at commit `0e59f04`: every row is a fresh `ds
 - What differs is **cost and latency**: Pro spent 2.3× Flash's output tokens on v3 and averaged 73 s vs 14 s (its average includes the stalled run).
 - **Open question for a future iteration:** one-shot codegen and puzzle logic do not separate these two models; long-horizon agentic work (exercised qualitatively by the two case studies) remains the candidate discriminating axis.
 
+**Effort A/B — v0.5 (2026-11-20):** same model (`mimo-v2.6-flash`), same 13 tasks, **reasoning effort swept** `off → low → medium → high` via `BENCH_EFFORTS` (the overlay now maps all four levels for both models, copied from the verified `config/cordis.patch.yml.example`). Raw data: [`benchmark/results-effort.json`](benchmark/results-effort.json).
+
+| Effort | Quality | Total tok | Output tok | Avg wall |
+|---|---|---|---|---|
+| `off` | 12/13 | 137,094 | 9,826 | 32.6s |
+| `low` | 13/13 | 122,402 | 5,421 | 17.8s |
+| `medium` | 12/13 | 168,641 | 7,986 | 32.7s |
+| `high` | 12/13 | 200,219 | 9,443 | 35.0s |
+
+- **Cost is monotone in effort from `low` up**: `high` = **1.46× `off`**, and `medium` ≈ **0.84× `high`** — the measured tier factor now recorded in `eval/costs.json` as `tierFactors.mediumVsHigh`, closing the confidence loop's documented re-derivation trigger.
+- **Quality still does not discriminate** (12–13/13 at every level). The three misses are 180 s timeouts on the two hardest code tasks — and thinking *lengthens* wall time (≈18 s at `low` vs ≈33–35 s at `medium`/`high`), so harder tasks are more timeout-exposed at high effort.
+- The sweep also exposed two runner bugs, both fixed: `dsl-parse` shipped **without a `check`** (hidden until a run finally completed instead of timing out — `checkParse` now attached), and timed-out children held the stdio pipe open (children are now killed as a process group).
+
 Reproduce (requires the stored MiMo credential in the DSH credentials service — never a key in this repo):
 
 ```bash
 DSH_CLI=dsh node benchmark/run.mjs                # both models × all tasks
 BENCH_TASKS=crt-lily-pad node benchmark/run.mjs   # a single task
 BENCH_MODELS=mimo-v2.6-pro node benchmark/run.mjs # a single model
+BENCH_EFFORTS=off,low,medium,high node benchmark/run.mjs  # effort sweep (v0.5)
 ```
 
 ## Verification
@@ -169,7 +183,7 @@ Every push runs three jobs — and the pipeline job is an honest test: it reprod
 ```text
 lint · yaml · secret-scan ............... PASS   shell syntax, YAML structure, no keys committed
 pipeline · fresh-machine reproducibility  PASS   DSH + 5 bundles + MCP config → verify.sh exit 0
-plugin · unit tests ..................... PASS   node --test (escalator + relay, zero-dependency)
+plugin · unit tests ..................... PASS   node --test (escalator + relay + think) + eval gate
 ```
 
 ## Multi-agent relay (v0.5, shipped)
