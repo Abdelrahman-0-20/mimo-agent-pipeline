@@ -29,6 +29,23 @@ const isRecord = (value) => value !== null && typeof value === 'object' && !Arra
 const nonEmpty = (value) => typeof value === 'string' && value.trim() !== ''
 
 /**
+ * Human-readable failure text for any thrown value: its message when present,
+ * JSON for the plain-object abort reasons DSH uses, String() as the last
+ * resort — never the "[object Object]" String() alone produces.
+ * @param {unknown} error - the caught rejection or thrown value.
+ * @returns {string}
+ */
+const reasonOf = (error) => {
+  if (typeof error === 'string') return error
+  if (error instanceof Error) return error.message
+  if (isRecord(error)) {
+    if (typeof error.message === 'string') return error.message
+    try { return JSON.stringify(error) ?? String(error) } catch { /* circular */ }
+  }
+  return String(error)
+}
+
+/**
  * Build the thinking child's prompt.
  * @param {{ question: string, context?: unknown, focus?: unknown }} input - the pass inputs.
  * @returns {string}
@@ -172,20 +189,30 @@ export async function runThink(input) {
       timeoutMs,
     )
     try {
+      // An already-aborted attempt must not spawn a child: startActivation
+      // throws ACTIVATION_CLOSING while the parent closes, and that child
+      // promise would be orphaned by the race below. Fail with the abort
+      // reason instead.
+      if (attemptController.signal.aborted) {
+        throw attemptController.signal.reason ?? new Error('think pass aborted')
+      }
       const spawned = spawn({ prompt, outputSchema, signal: attemptController.signal })
       // The pass owns the deadline: race the spawn against the attempt signal
-      // so even a spawn that ignores signals cannot overrun it.
+      // so even a spawn that ignores signals cannot overrun it. Attach the
+      // spawn handlers BEFORE consulting the abort state: returning early
+      // without them leaves `spawned` unhandled, and its later rejection is
+      // an unhandled rejection that takes the whole process down.
       const result = await new Promise((resolve, reject) => {
         const onAbort = () => reject(attemptController.signal.reason ?? new Error('aborted'))
+        spawned.then(
+          (value) => { attemptController.signal.removeEventListener('abort', onAbort); resolve(value) },
+          (error) => { attemptController.signal.removeEventListener('abort', onAbort); reject(error) },
+        )
         if (attemptController.signal.aborted) {
           onAbort()
           return
         }
         attemptController.signal.addEventListener('abort', onAbort, { once: true })
-        spawned.then(
-          (value) => { attemptController.signal.removeEventListener('abort', onAbort); resolve(value) },
-          (error) => { attemptController.signal.removeEventListener('abort', onAbort); reject(error) },
-        )
       })
       if (result?.stopReason !== 'completed') {
         lastFailure = {
@@ -203,7 +230,7 @@ export async function runThink(input) {
       if (attempt > 0) log('recovered on retry ' + attempt)
       return { ok: true, reason: '', result: check.value, attempts: attempt + 1 }
     } catch (error) {
-      lastFailure = { ok: false, reason: error?.message ?? String(error) }
+      lastFailure = { ok: false, reason: reasonOf(error) }
       continue
     } finally {
       clearTimeout(timer)

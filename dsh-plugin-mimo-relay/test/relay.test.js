@@ -360,3 +360,70 @@ test('a builder legitimately reporting fail is NOT retried', async () => {
   assert.match(report.reason, /real failure/)
   assert.equal(observed.filter((e) => e.role === 'builder').length, 1)
 })
+
+test('an already-aborted phase fails without spawning a child', async () => {
+  const controller = new AbortController()
+  const locks = new LockRegistry()
+  let spawnCalls = 0
+  const report = await runRelay({
+    ...BASE,
+    signal: controller.signal,
+    locks,
+    log: (message) => {
+      // Abort right after the lock is held: the phase must then fail on the
+      // abort guard without ever reaching startActivation. (An abort BEFORE
+      // acquisition fails in locks.acquire instead, which is not this path.)
+      if (message.includes('acquired')) controller.abort(new Error('outer aborted'))
+    },
+    spawn: async () => {
+      spawnCalls += 1
+      return { structured: PLAN, stopReason: 'completed', output: [] }
+    },
+  })
+  assert.equal(report.ok, false)
+  assert.equal(spawnCalls, 0, 'a doomed child must never be spawned')
+  assert.ok(report.reason.includes('outer aborted'), report.reason)
+  assert.deepEqual(locks.snapshot(), {})
+})
+
+test('a spawn rejection after a phase abort is observed, never unhandled', async () => {
+  const unhandled = []
+  const onUnhandled = (reason) => { unhandled.push(reason) }
+  process.on('unhandledRejection', onUnhandled)
+  try {
+    const controller = new AbortController()
+    const locks = new LockRegistry()
+    const report = await runRelay({
+      ...BASE,
+      signal: controller.signal,
+      locks,
+      spawn: () => {
+        // Abort synchronously while the spawn promise is still pending: the
+        // race must still observe the spawn's later rejection, or it becomes
+        // an unhandled rejection that fails the whole harness process.
+        controller.abort(new Error('outer aborted'))
+        return new Promise((resolve, reject) => { setTimeout(() => reject(new Error('spawn died')), 10) })
+      },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    assert.equal(report.ok, false)
+    assert.ok(report.reason.includes('outer aborted'), report.reason)
+    assert.deepEqual(unhandled, [], 'the spawn rejection must be observed by the race')
+    assert.deepEqual(locks.snapshot(), {})
+  } finally {
+    process.removeListener('unhandledRejection', onUnhandled)
+  }
+})
+
+test('a plain-object rejection is reported as JSON, not [object Object]', async () => {
+  const locks = new LockRegistry()
+  const report = await runRelay({
+    ...BASE,
+    locks,
+    spawn: async () => { throw { kind: 'parent' } },
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.phase, 'plan')
+  assert.equal(report.reason, '{"kind":"parent"}')
+  assert.deepEqual(locks.snapshot(), {})
+})

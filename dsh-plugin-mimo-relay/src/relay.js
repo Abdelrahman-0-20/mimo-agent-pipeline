@@ -68,6 +68,23 @@ const isRecord = (value) => value !== null && typeof value === 'object' && !Arra
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0
 
 /**
+ * Human-readable failure text for any thrown value: its message when present,
+ * JSON for the plain-object abort reasons DSH uses, String() as the last
+ * resort — never the "[object Object]" String() alone produces.
+ * @param {unknown} error - the caught rejection or thrown value.
+ * @returns {string}
+ */
+const reasonOf = (error) => {
+  if (typeof error === 'string') return error
+  if (error instanceof Error) return error.message
+  if (isRecord(error)) {
+    if (typeof error.message === 'string') return error.message
+    try { return JSON.stringify(error) ?? String(error) } catch { /* circular */ }
+  }
+  return String(error)
+}
+
+/**
  * Validate one phase's structured handoff against the contract.
  * @param {'planner' | 'builder' | 'verifier'} role - contract owner.
  * @param {unknown} structured - the captured structured output.
@@ -244,6 +261,13 @@ export async function runRelay(input) {
           phaseTimeoutMs,
         )
         try {
+          // An already-aborted phase must not spawn a child: startActivation
+          // throws ACTIVATION_CLOSING while the parent closes, and that child
+          // promise would be orphaned by the race below. Fail with the abort
+          // reason instead.
+          if (phaseController.signal.aborted) {
+            throw phaseController.signal.reason ?? new Error('relay phase aborted')
+          }
           const spawned = spawn({
             phase, role, prompt, model, reasoningEffort,
             outputSchema: HANDOFF_SCHEMAS[role],
@@ -251,17 +275,21 @@ export async function runRelay(input) {
           })
           // The relay owns the deadline: race the spawn against the phase
           // signal so even a spawn that ignores signals cannot overrun it.
+          // Attach the spawn handlers BEFORE consulting the abort state:
+          // returning early without them leaves `spawned` unhandled, and its
+          // later rejection is an unhandled rejection that takes the whole
+          // process down.
           const result = await new Promise((resolve, reject) => {
             const onAbort = () => reject(phaseController.signal.reason ?? new Error('aborted'))
+            spawned.then(
+              (value) => { phaseController.signal.removeEventListener('abort', onAbort); resolve(value) },
+              (error) => { phaseController.signal.removeEventListener('abort', onAbort); reject(error) },
+            )
             if (phaseController.signal.aborted) {
               onAbort()
               return
             }
             phaseController.signal.addEventListener('abort', onAbort, { once: true })
-            spawned.then(
-              (value) => { phaseController.signal.removeEventListener('abort', onAbort); resolve(value) },
-              (error) => { phaseController.signal.removeEventListener('abort', onAbort); reject(error) },
-            )
           })
           if (result.stopReason !== 'completed') {
             lastFailure = { ok: false, phase, reason: `${role} ended with stopReason=${result.stopReason}${result.diagnostic ? `: ${result.diagnostic}` : ''}` }
@@ -275,7 +303,7 @@ export async function runRelay(input) {
           if (attempt > 0) log(`${phase}: recovered on retry ${attempt}`)
           return { value: check.value }
         } catch (error) {
-          lastFailure = { ok: false, phase, reason: error?.message ?? String(error) }
+          lastFailure = { ok: false, phase, reason: reasonOf(error) }
           continue
         } finally {
           clearTimeout(timer)
@@ -315,7 +343,7 @@ export async function runRelay(input) {
     return {
       ok: false,
       phase: 'error',
-      reason: error?.message ?? String(error),
+      reason: reasonOf(error),
       heldLocks: held.slice(),
     }
   }

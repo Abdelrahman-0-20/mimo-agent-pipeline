@@ -185,3 +185,58 @@ test('an outer abort fails the pass with the abort reason', async () => {
   assert.equal(report.ok, false)
   assert.ok(report.reason.includes('outer aborted'), report.reason)
 })
+
+test('an already-aborted pass fails without spawning a child', async () => {
+  const controller = new AbortController()
+  controller.abort(new Error('outer aborted'))
+  let spawnCalls = 0
+  const report = await runThink({
+    question: 'q',
+    retries: 1,
+    signal: controller.signal,
+    spawn: async () => {
+      spawnCalls += 1
+      return { stopReason: 'completed', structured: { ...GOOD } }
+    },
+  })
+  assert.equal(report.ok, false)
+  assert.equal(spawnCalls, 0, 'a doomed child must never be spawned')
+  assert.ok(report.reason.includes('outer aborted'), report.reason)
+})
+
+test('a spawn rejection after an abort is observed, never unhandled', async () => {
+  const unhandled = []
+  const onUnhandled = (reason) => { unhandled.push(reason) }
+  process.on('unhandledRejection', onUnhandled)
+  try {
+    const controller = new AbortController()
+    const report = await runThink({
+      question: 'q',
+      retries: 1,
+      signal: controller.signal,
+      spawn: () => {
+        // Abort synchronously while the spawn promise is still pending: the
+        // race must still observe the spawn's later rejection, or it becomes
+        // an unhandled rejection that fails the whole harness process.
+        controller.abort(new Error('outer aborted'))
+        return new Promise((resolve, reject) => { setTimeout(() => reject(new Error('spawn died')), 10) })
+      },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    assert.equal(report.ok, false)
+    assert.ok(report.reason.includes('outer aborted'), report.reason)
+    assert.deepEqual(unhandled, [], 'the spawn rejection must be observed by the race')
+  } finally {
+    process.removeListener('unhandledRejection', onUnhandled)
+  }
+})
+
+test('a plain-object rejection is reported as JSON, not [object Object]', async () => {
+  const report = await runThink({
+    question: 'q',
+    retries: 0,
+    spawn: async () => { throw { kind: 'parent' } },
+  })
+  assert.equal(report.ok, false)
+  assert.equal(report.reason, '{"kind":"parent"}')
+})
