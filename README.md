@@ -158,7 +158,8 @@ PASS  MCP playwright server
 PASS  MiMo auto-escalation plugin (Flash->Pro, 2 strikes)
 PASS  Multi-agent relay (Planner->Builder->Verifier)
 PASS  context7 live-docs connector
-10 passed, 0 failed
+PASS  MiMo thinking enhancer (prompt boost + mimo_think)
+11 passed, 0 failed
 ```
 
 ## Continuous integration
