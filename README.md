@@ -38,7 +38,7 @@ flowchart TD
 | [`AGENTS.md`](AGENTS.md) | Verification gates: recall first, verify before done (exit code 0), persist learnings, no `.env` access |
 | [`config/cordis.patch.yml.example`](config/cordis.patch.yml.example) | Pipeline config template — MiMo routes + reasoning levels + 4 MCP servers (sanitized) |
 | [`config/settings.yaml.example`](config/settings.yaml.example) | Same routing in DSH's `settings.yaml` style |
-| [`install.sh`](install.sh) | Installs the 3 MichengAI plugins + the local escalator & relay bundles + pinned memory server |
+| [`install.sh`](install.sh) | Installs the 3 MichengAI plugins + the local escalator, relay & think bundles + pinned memory server |
 | [`verify.sh`](verify.sh) | Exit-code-0 gate: proves all 11 components mounted via `dsh --dump-config` |
 | [`dsh-plugin-mimo-escalator/`](dsh-plugin-mimo-escalator/) | **Original plugin (v0.3–v0.6)** — auto Flash↔Pro escalation with hysteresis, per-role `<workspace>:<role>` state keys, persistence, metrics, CI-status detection, thinking-off-on-discovery effort policy, standalone stdio MCP server (`mcp-server.mjs`) · `npm test` |
 | [`dsh-plugin-mimo-relay/`](dsh-plugin-mimo-relay/) | **Original plugin (v0.5/v0.6)** — `mimo_relay` tool: Planner→Builder→Verifier over the `spawn` backend with role presets, connector locks, schema-checked handoff, per-role tool scoping (builder 85 → 9 schemas) · `npm test` |
